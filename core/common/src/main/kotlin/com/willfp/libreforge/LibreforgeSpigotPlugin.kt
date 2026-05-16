@@ -186,7 +186,7 @@ class LibreforgeSpigotPlugin : EcoPlugin() {
     override fun createTasks() {
         dispatchedTriggerFactory.startTicking()
 
-        // Poll for condition changes — staggered across 20 ticks by UUID to avoid per-tick spike.
+        // Poll for condition changes - staggered across 20 ticks by UUID to avoid per-tick spike.
         // Holders are presumed stable between events; pollEffects() skips the provider rescan.
         plugin.scheduler.runTimer(20, 1, PlayerPollTask())
 
@@ -200,7 +200,9 @@ class LibreforgeSpigotPlugin : EcoPlugin() {
                 plugin.scheduler.runTimer(currentOffset, configYml.getInt("refresh.entities.interval").toLong()) {
                     for (entity in world.entities) {
                         if (entity is LivingEntity) {
-                            entity.toDispatcher().pollEffects()
+                            SchedulerHelper.runTask(this@LibreforgeSpigotPlugin, entity) {
+                                entity.toDispatcher().pollEffects()
+                            }
                         }
                     }
                 }
@@ -284,7 +286,9 @@ class LibreforgeSpigotPlugin : EcoPlugin() {
             for (player in Bukkit.getOnlinePlayers()) {
                 if ((player.uniqueId.leastSignificantBits.toInt() and Int.MAX_VALUE) % 20 != currentSlot) continue
                 if (skipAFKPlayers && AFKManager.isAfk(player)) continue
-                player.toDispatcher().pollEffects()
+                SchedulerHelper.runTask(this@LibreforgeSpigotPlugin, player) {
+                    player.toDispatcher().pollEffects()
+                }
             }
         }
     }

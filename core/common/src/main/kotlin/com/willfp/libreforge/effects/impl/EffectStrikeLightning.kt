@@ -2,6 +2,7 @@ package com.willfp.libreforge.effects.impl
 
 import com.willfp.eco.core.config.interfaces.Config
 import com.willfp.libreforge.NoCompileData
+import com.willfp.libreforge.SchedulerHelper
 import com.willfp.libreforge.effects.Effect
 import com.willfp.libreforge.getIntFromExpression
 import com.willfp.libreforge.getOrElse
@@ -21,7 +22,7 @@ object EffectStrikeLightning : Effect<NoCompileData>("strike_lightning") {
         val amount = config.getOrElse("amount", 1) { getIntFromExpression(it, data) }
 
         for (i in 1..amount) {
-            plugin.scheduler.runLater({
+            SchedulerHelper.runTaskLater(plugin, location, {
                 world.strikeLightning(location)
             }, 1)
         }

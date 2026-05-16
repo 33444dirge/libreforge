@@ -6,6 +6,7 @@ import com.willfp.libreforge.Dispatcher
 import com.willfp.libreforge.Holder
 import com.willfp.libreforge.HolderTemplate
 import com.willfp.libreforge.SimpleProvidedHolder
+import com.willfp.libreforge.SchedulerHelper
 import com.willfp.libreforge.ViolationContext
 import com.willfp.libreforge.arguments
 import com.willfp.libreforge.conditions.Conditions
@@ -65,9 +66,9 @@ object EffectAddHolderInRadius : Effect<HolderTemplate>("add_holder_in_radius") 
         )
 
         holders += holder
-        plugin.scheduler.runLater(duration.toLong()) {
+        SchedulerHelper.runTaskLater(plugin, location, {
             holders -= holder
-        }
+        }, duration.toLong())
 
         return true
     }

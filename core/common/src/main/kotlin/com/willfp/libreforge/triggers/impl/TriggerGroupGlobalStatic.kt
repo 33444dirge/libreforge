@@ -2,6 +2,7 @@ package com.willfp.libreforge.triggers.impl
 
 import com.willfp.eco.core.placeholder.context.placeholderContext
 import com.willfp.eco.util.evaluateExpressionOrNull
+import com.willfp.libreforge.FoliaRunnableTask
 import com.willfp.libreforge.GlobalDispatcher
 import com.willfp.libreforge.plugin
 import com.willfp.libreforge.triggers.Trigger
@@ -30,7 +31,7 @@ object TriggerGroupGlobalStatic : TriggerGroup("global_static") {
     }
 
     override fun postRegister() {
-        plugin.scheduler.runTimer(1, 1) {
+        val task = FoliaRunnableTask(plugin) {
             tick++
 
             for ((interval, trigger) in registry) {
@@ -46,6 +47,8 @@ object TriggerGroupGlobalStatic : TriggerGroup("global_static") {
                 trigger.dispatchIfMet(tick)
             }
         }
+
+        task.runTask(1L, 1L)
     }
 
     private class TriggerGlobalStatic(interval: Int) : Trigger("global_static_$interval") {

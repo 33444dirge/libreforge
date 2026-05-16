@@ -2,6 +2,7 @@ package com.willfp.libreforge.effects.impl
 
 import com.willfp.eco.core.config.interfaces.Config
 import com.willfp.libreforge.NoCompileData
+import com.willfp.libreforge.SchedulerHelper
 import com.willfp.libreforge.arguments
 import com.willfp.libreforge.effects.Effect
 import com.willfp.libreforge.getIntFromExpression
@@ -23,9 +24,9 @@ object EffectSilence : Effect<NoCompileData>("silence") {
         val ticks = config.getIntFromExpression("ticks", data)
 
         victim.isSilent = true
-        plugin.scheduler.runLater(ticks.toLong()) {
+        SchedulerHelper.runTaskLater(plugin, victim, {
             victim.isSilent = false
-        }
+        }, ticks.toLong())
 
         return true
     }

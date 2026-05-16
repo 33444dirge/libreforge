@@ -5,6 +5,7 @@ import com.willfp.eco.core.map.listMap
 import com.willfp.libreforge.Holder
 import com.willfp.libreforge.HolderTemplate
 import com.willfp.libreforge.SimpleProvidedHolder
+import com.willfp.libreforge.SchedulerHelper
 import com.willfp.libreforge.ViolationContext
 import com.willfp.libreforge.arguments
 import com.willfp.libreforge.conditions.Conditions
@@ -46,12 +47,12 @@ object EffectAddHolderToVictim : Effect<HolderTemplate>("add_holder_to_victim") 
 
         holders[player.uniqueId].add(holder)
 
-        plugin.scheduler.runLater(duration.toLong()) {
+        SchedulerHelper.runTaskLater(plugin, player, {
             holders[player.uniqueId].remove(holder)
             if (holders[player.uniqueId].isEmpty()) {
                 holders.remove(player.uniqueId)
             }
-        }
+        }, duration.toLong())
 
         return true
     }

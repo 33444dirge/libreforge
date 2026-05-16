@@ -2,6 +2,7 @@ package com.willfp.libreforge.effects.impl
 
 import com.willfp.eco.core.config.interfaces.Config
 import com.willfp.eco.core.entities.Entities
+import com.willfp.libreforge.FoliaRunnableTask
 import com.willfp.libreforge.NoCompileData
 import com.willfp.libreforge.arguments
 import com.willfp.libreforge.effects.Effect
@@ -37,8 +38,9 @@ object EffectVortex : Effect<NoCompileData>("vortex") {
 
         val affected = mutableSetOf<LivingEntity>()
         var tick = 0
+        var task: FoliaRunnableTask? = null
 
-        plugin.runnableFactory.create { task ->
+        task = FoliaRunnableTask(plugin) {
             tick++
 
             origin.world?.getNearbyEntities(origin, radius, radius, radius)
@@ -59,9 +61,11 @@ object EffectVortex : Effect<NoCompileData>("vortex") {
 
             if (tick >= duration) {
                 affected.forEach { it.damage(damage) }
-                task.cancel()
+                task?.cancel()
             }
-        }.runTaskTimer(0L, 1L)
+        }
+
+        task.runTask(origin, 0L, 1L)
 
         return true
     }

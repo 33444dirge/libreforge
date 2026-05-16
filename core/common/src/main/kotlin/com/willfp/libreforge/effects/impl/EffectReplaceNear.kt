@@ -6,6 +6,7 @@ import com.willfp.eco.core.config.interfaces.Config
 import com.willfp.eco.core.integrations.antigrief.AntigriefManager
 import com.willfp.eco.core.items.Items
 import com.willfp.libreforge.NoCompileData
+import com.willfp.libreforge.SchedulerHelper
 import com.willfp.libreforge.arguments
 import com.willfp.libreforge.effects.Effect
 import com.willfp.libreforge.getIntFromExpression
@@ -98,13 +99,13 @@ object EffectReplaceNear : Effect<NoCompileData>("replace_near") {
                         val oldBlockData = toReplace.blockData
                         toReplace.setMetadata("rn-block", plugin.createMetadataValue(true))
 
-                        plugin.scheduler.runLater(duration.toLong()) {
+                        SchedulerHelper.runTaskLater(plugin, toReplace.location, {
                             if (toReplace.hasMetadata("rn-block")) {
                                 toReplace.type = oldBlock
                                 toReplace.blockData = oldBlockData
                                 toReplace.removeMetadata("rn-block", plugin)
                             }
-                        }
+                        }, duration.toLong())
                     }
 
                     toReplace.type = replaceTo

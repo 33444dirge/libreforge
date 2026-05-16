@@ -1,5 +1,6 @@
 package com.willfp.libreforge.effects.impl
 
+import com.willfp.libreforge.SchedulerHelper
 import com.willfp.libreforge.effects.templates.ChanceMultiplierEffect
 import com.willfp.libreforge.plugin
 import com.willfp.libreforge.toDispatcher
@@ -20,8 +21,8 @@ object EffectDontConsumeLapisChance : ChanceMultiplierEffect("dont_consume_lapis
         }
 
         // 2 Ticks because that's what I did in EcoSkills!
-        plugin.scheduler.runLater(2) {
+        SchedulerHelper.runTaskLater(plugin, player, {
             event.inventory.addItem(ItemStack(Material.LAPIS_LAZULI, cost))
-        }
+        }, 2)
     }
 }

@@ -2,6 +2,7 @@ package com.willfp.libreforge.effects.impl
 
 import com.willfp.eco.core.Prerequisite
 import com.willfp.eco.core.config.interfaces.Config
+import com.willfp.libreforge.FoliaRunnableTask
 import com.willfp.libreforge.NoCompileData
 import com.willfp.libreforge.arguments
 import com.willfp.libreforge.effects.Effect
@@ -32,8 +33,9 @@ object EffectBleed : Effect<NoCompileData>("bleed") {
         val amount = config.getIntFromExpression("amount", data)
 
         var current = 0
+        var task: FoliaRunnableTask? = null
 
-        plugin.runnableFactory.create {
+        task = FoliaRunnableTask(plugin) {
             current++
 
             val killed = damage >= victim.health
@@ -54,9 +56,11 @@ object EffectBleed : Effect<NoCompileData>("bleed") {
             victim.damage(damage)
 
             if (current >= amount || killed) {
-                it.cancel()
+                task?.cancel()
             }
-        }.runTaskTimer(interval.toLong(), interval.toLong())
+        }
+
+        task.runTask(victim, interval.toLong(), interval.toLong())
 
         return true
     }

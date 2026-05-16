@@ -2,6 +2,7 @@ package com.willfp.libreforge.effects.impl
 
 import com.willfp.eco.core.config.interfaces.Config
 import com.willfp.libreforge.NoCompileData
+import com.willfp.libreforge.SchedulerHelper
 import com.willfp.libreforge.arguments
 import com.willfp.libreforge.effects.Effect
 import com.willfp.libreforge.getDoubleFromExpression
@@ -24,13 +25,13 @@ object EffectSetVelocity : Effect<NoCompileData>("set_velocity") {
     override fun onTrigger(config: Config, data: TriggerData, compileData: NoCompileData): Boolean {
         val player = data.player ?: return false
 
-        plugin.scheduler.runLater(1) {
+        SchedulerHelper.runTaskLater(plugin, player, {
             player.velocity = Vector(
                 config.getDoubleFromExpression("x", data),
                 config.getDoubleFromExpression("y", data),
                 config.getDoubleFromExpression("z", data)
             )
-        }
+        }, 1)
 
         return true
     }

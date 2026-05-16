@@ -3,6 +3,7 @@ package com.willfp.libreforge.triggers
 import com.willfp.eco.core.EcoPlugin
 import com.willfp.eco.core.map.listMap
 import com.willfp.libreforge.Dispatcher
+import com.willfp.libreforge.FoliaRunnableTask
 import java.util.UUID
 
 /*
@@ -33,8 +34,10 @@ class DispatchedTriggerFactory(
     }
 
     internal fun startTicking() {
-        plugin.scheduler.runTimer(1, 1) {
+        val task = FoliaRunnableTask(plugin) {
             dispatcherTriggers.clear()
         }
+
+        task.runTask(1L, 1L)
     }
 }

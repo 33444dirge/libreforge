@@ -3,6 +3,7 @@ package com.willfp.libreforge.effects.impl
 import com.willfp.eco.core.config.interfaces.Config
 import com.willfp.eco.core.integrations.hologram.HologramManager
 import com.willfp.libreforge.NoCompileData
+import com.willfp.libreforge.SchedulerHelper
 import com.willfp.libreforge.arguments
 import com.willfp.libreforge.effects.Effect
 import com.willfp.libreforge.getDoubleFromExpression
@@ -29,9 +30,9 @@ object EffectCreateHologram : Effect<NoCompileData>("create_hologram") {
 
         val hologram = HologramManager.createHologram(location, text)
 
-        plugin.scheduler.runLater(duration.toLong()) {
+        SchedulerHelper.runTaskLater(plugin, location, {
             hologram.remove()
-        }
+        }, duration.toLong())
 
         return true
     }

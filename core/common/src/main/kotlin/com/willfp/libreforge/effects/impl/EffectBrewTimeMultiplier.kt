@@ -1,5 +1,6 @@
 package com.willfp.libreforge.effects.impl
 
+import com.willfp.libreforge.SchedulerHelper
 import com.willfp.libreforge.effects.templates.MultiplierEffect
 import com.willfp.libreforge.plugin
 import com.willfp.libreforge.toDispatcher
@@ -23,7 +24,7 @@ object EffectBrewTimeMultiplier : MultiplierEffect("brew_time_multiplier") {
 
         // 2 seconds later to allow for the brewing stand to update, I guess.
         // This is from old EcoSkills code
-        plugin.scheduler.runLater(2) {
+        SchedulerHelper.runTaskLater(plugin, player, {
             val stand = player.openInventory.topInventory.holder
 
             if (stand is BrewingStand) {
@@ -33,6 +34,6 @@ object EffectBrewTimeMultiplier : MultiplierEffect("brew_time_multiplier") {
                     player.updateInventory()
                 }
             }
-        }
+        }, 2)
     }
 }

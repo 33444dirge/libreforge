@@ -2,6 +2,7 @@ package com.willfp.libreforge.effects.impl
 
 import com.willfp.eco.core.config.interfaces.Config
 import com.willfp.libreforge.NoCompileData
+import com.willfp.libreforge.SchedulerHelper
 import com.willfp.libreforge.arguments
 import com.willfp.libreforge.effects.Effect
 import com.willfp.libreforge.getIntFromExpression
@@ -32,9 +33,9 @@ object EffectStripAI : Effect<NoCompileData>("strip_ai") {
 
         victim.setAI(false)
 
-        plugin.scheduler.runLater(duration.toLong()) {
+        SchedulerHelper.runTaskLater(plugin, victim, {
             victim.setAI(true)
-        }
+        }, duration.toLong())
 
         return true
     }

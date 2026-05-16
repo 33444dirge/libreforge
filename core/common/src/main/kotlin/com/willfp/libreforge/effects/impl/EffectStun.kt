@@ -1,6 +1,7 @@
 package com.willfp.libreforge.effects.impl
 
 import com.willfp.eco.core.config.interfaces.Config
+import com.willfp.libreforge.FoliaRunnableTask
 import com.willfp.libreforge.NoCompileData
 import com.willfp.libreforge.arguments
 import com.willfp.libreforge.effects.Effect
@@ -24,11 +25,14 @@ object EffectStun : Effect<NoCompileData>("stun") {
         val ticks = config.getIntFromExpression("ticks", data)
 
         var current = 0
-        plugin.runnableFactory.create {
+        var task: FoliaRunnableTask? = null
+        task = FoliaRunnableTask(plugin) {
             current++
             victim.velocity = Vector(0, 0, 0)
-            if (current >= ticks) it.cancel()
-        }.runTaskTimer(0L, 1L)
+            if (current >= ticks) task?.cancel()
+        }
+
+        task.runTask(victim, 0L, 1L)
 
         return true
     }

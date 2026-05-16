@@ -2,6 +2,7 @@ package com.willfp.libreforge.effects.impl
 
 import com.willfp.eco.core.config.interfaces.Config
 import com.willfp.libreforge.NoCompileData
+import com.willfp.libreforge.SchedulerHelper
 import com.willfp.libreforge.arguments
 import com.willfp.libreforge.effects.Effect
 import com.willfp.libreforge.getDoubleFromExpression
@@ -29,13 +30,13 @@ object EffectTimeBomb : Effect<NoCompileData>("time_bomb") {
 
         if (glow) victim.isGlowing = true
 
-        plugin.scheduler.runLater(fuse.toLong()) {
+        SchedulerHelper.runTaskLater(plugin, victim, {
             if (glow) victim.isGlowing = false
             if (!victim.isDead) {
                 val loc = victim.location
                 loc.world?.createExplosion(loc, power.toFloat(), false, breakBlocks, victim)
             }
-        }
+        }, fuse.toLong())
 
         return true
     }

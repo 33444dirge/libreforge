@@ -1,6 +1,7 @@
 package com.willfp.libreforge.effects.impl
 
 import com.willfp.eco.core.config.interfaces.Config
+import com.willfp.libreforge.FoliaRunnableTask
 import com.willfp.libreforge.ViolationContext
 import com.willfp.libreforge.arguments
 import com.willfp.libreforge.effects.Effect
@@ -37,7 +38,8 @@ object EffectAnimation : Effect<AnimationBlock<*, *>?>("animation") {
                 data
             )
 
-            plugin.runnableFactory.create {
+            var task: FoliaRunnableTask? = null
+            task = FoliaRunnableTask(plugin) {
                 if (
                     animationBlock.play(
                         tick,
@@ -53,11 +55,13 @@ object EffectAnimation : Effect<AnimationBlock<*, *>?>("animation") {
                         data,
                         animationData
                     )
-                    it.cancel()
+                    task?.cancel()
                 }
 
                 tick++
-            }.runTaskTimer(0, 1)
+            }
+
+            task.runTask(location, 0L, 1L)
         }
 
         playAnimation(compileData)

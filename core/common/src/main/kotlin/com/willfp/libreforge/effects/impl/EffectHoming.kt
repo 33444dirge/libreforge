@@ -4,6 +4,7 @@ import com.willfp.eco.core.config.interfaces.Config
 import com.willfp.eco.core.entities.Entities
 import com.willfp.eco.core.entities.TestableEntity
 import com.willfp.eco.core.integrations.antigrief.AntigriefManager
+import com.willfp.libreforge.FoliaRunnableTask
 import com.willfp.libreforge.ViolationContext
 import com.willfp.libreforge.arguments
 import com.willfp.libreforge.distance
@@ -90,15 +91,16 @@ object EffectHoming : Effect<List<TestableEntity>>("homing") {
 
         arrow.setMetadata(META_KEY_TRACKED, plugin.createMetadataValue(true))
 
-        plugin.runnableFactory.create { task ->
+        var task: FoliaRunnableTask? = null
+        task = FoliaRunnableTask(plugin) {
             checks++
 
             if (checks > MAX_CHECKS) {
-                task.cancel()
+                task?.cancel()
             }
 
             if (arrow.isDead || arrow.isInBlock || arrow.isOnGround) {
-                task.cancel()
+                task?.cancel()
             }
 
             val entities = arrow.getNearbyEntities(distance, distance, distance)
@@ -116,7 +118,7 @@ object EffectHoming : Effect<List<TestableEntity>>("homing") {
                 val dist = arrow.location.toFloat3().distance(entity.eyeLocation.toFloat3())
 
                 if (dist < 1.0) {
-                    task.cancel()
+                    task?.cancel()
                     break
                 }
 
@@ -144,7 +146,9 @@ object EffectHoming : Effect<List<TestableEntity>>("homing") {
                 arrow.velocity = lerp(arrow.velocity.toFloat3(), targetVelocity, 1 - SMOOTHNESS).toVector()
             }
 
-        }.runTaskTimer(3L, CHECK_DELAY)
+        }
+
+        task.runTask(arrow, 3L, CHECK_DELAY)
     }
 
     override fun makeCompileData(config: Config, context: ViolationContext): List<TestableEntity> {

@@ -1,5 +1,6 @@
 package com.willfp.libreforge.integrations.lands.impl
 
+import com.willfp.libreforge.SchedulerHelper
 import com.willfp.libreforge.plugin
 import com.willfp.libreforge.toDispatcher
 import com.willfp.libreforge.triggers.Trigger
@@ -31,8 +32,8 @@ object TriggerUnclaim : Trigger("unclaim") {
             multiChunkUnclaimingPlayers[player.uniqueId] = event.affectedChunks.size
         }
 
-        Bukkit.getScheduler().runTask(plugin, Runnable { 
-        // TriggerDispatchEvent may only be triggered synchronously.
+        SchedulerHelper.runTask(plugin, player.location) {
+            // TriggerDispatchEvent may only be triggered synchronously.
             this.dispatch(
                 player.toDispatcher(),
                 TriggerData(
@@ -42,7 +43,7 @@ object TriggerUnclaim : Trigger("unclaim") {
                     value = event.affectedChunks.size.toDouble()
                 )
             )
-        })
+        }
     }
 
     @EventHandler(ignoreCancelled = true)
@@ -81,8 +82,8 @@ object TriggerUnclaim : Trigger("unclaim") {
             return
         }
 
-        Bukkit.getScheduler().runTask(plugin, Runnable { 
-        // TriggerDispatchEvent may only be triggered synchronously.
+        SchedulerHelper.runTask(plugin, player.location) {
+            // TriggerDispatchEvent may only be triggered synchronously.
             this.dispatch(
                 player.toDispatcher(),
                 TriggerData(
@@ -92,6 +93,6 @@ object TriggerUnclaim : Trigger("unclaim") {
                     value = 1.0
                 )
             )
-        })
+        }
     }
 }

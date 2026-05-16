@@ -2,6 +2,7 @@ package com.willfp.libreforge.effects.impl
 
 import com.willfp.eco.core.config.interfaces.Config
 import com.willfp.libreforge.NoCompileData
+import com.willfp.libreforge.SchedulerHelper
 import com.willfp.libreforge.arguments
 import com.willfp.libreforge.effects.Effect
 import com.willfp.libreforge.getDoubleFromExpression
@@ -33,7 +34,7 @@ object EffectTeleportTo : Effect<NoCompileData>("teleport_to") {
             config.getDoubleFromExpression("z", data)
         )
 
-        player.teleport(loc)
+        SchedulerHelper.teleportEntity(player, loc)
 
         return true
     }

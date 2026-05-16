@@ -1,7 +1,9 @@
 package com.willfp.libreforge.effects.impl
 
 import com.willfp.eco.core.config.interfaces.Config
+import com.willfp.libreforge.FoliaRunnableTask
 import com.willfp.libreforge.NoCompileData
+import com.willfp.libreforge.SchedulerHelper
 import com.willfp.libreforge.arguments
 import com.willfp.libreforge.effects.Effect
 import com.willfp.libreforge.getDoubleFromExpression
@@ -35,13 +37,13 @@ object EffectTraceback : Effect<NoCompileData>("traceback") {
 
         val location = times.getOrElse(index) { times.lastOrNull() } ?: return false
 
-        player.teleport(location)
+        SchedulerHelper.teleportEntity(player, location)
 
         return true
     }
 
     override fun postRegister() {
-        plugin.scheduler.runTimer(20, 20) {
+        val task = FoliaRunnableTask(plugin) {
             for (player in Bukkit.getOnlinePlayers()) {
                 @Suppress("UNCHECKED_CAST")
                 val times = player.getMetadata(key).getOrNull(0)?.value() as? List<Location> ?: emptyList()
@@ -51,5 +53,7 @@ object EffectTraceback : Effect<NoCompileData>("traceback") {
                 player.setMetadata(key, plugin.metadataValueFactory.create(newTimes))
             }
         }
+
+        task.runTask(20L, 20L)
     }
 }

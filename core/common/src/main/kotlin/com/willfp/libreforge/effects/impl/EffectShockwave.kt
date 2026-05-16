@@ -1,6 +1,7 @@
 package com.willfp.libreforge.effects.impl
 
 import com.willfp.eco.core.config.interfaces.Config
+import com.willfp.libreforge.FoliaRunnableTask
 import com.willfp.libreforge.NoCompileData
 import com.willfp.libreforge.arguments
 import com.willfp.libreforge.effects.Effect
@@ -34,7 +35,8 @@ object EffectShockwave : Effect<NoCompileData>("shockwave") {
         val hit = mutableSetOf<LivingEntity>()
         var pulse = 0
 
-        plugin.runnableFactory.create { task ->
+        var task: FoliaRunnableTask? = null
+        task = FoliaRunnableTask(plugin) {
             pulse++
             val currentRadius = radius * pulse / pulses
 
@@ -50,8 +52,10 @@ object EffectShockwave : Effect<NoCompileData>("shockwave") {
                     entity.damage(damage)
                 }
 
-            if (pulse >= pulses) task.cancel()
-        }.runTaskTimer(0L, 3L)
+            if (pulse >= pulses) task?.cancel()
+        }
+
+        task.runTask(origin, 0L, 3L)
 
         return true
     }

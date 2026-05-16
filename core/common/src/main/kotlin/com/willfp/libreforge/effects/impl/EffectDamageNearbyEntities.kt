@@ -4,6 +4,7 @@ import com.willfp.eco.core.config.interfaces.Config
 import com.willfp.eco.core.entities.Entities
 import com.willfp.eco.core.entities.TestableEntity
 import com.willfp.eco.core.integrations.antigrief.AntigriefManager
+import com.willfp.libreforge.SchedulerHelper
 import com.willfp.libreforge.ViolationContext
 import com.willfp.libreforge.arguments
 import com.willfp.libreforge.effects.Effect
@@ -57,7 +58,7 @@ object EffectDamageNearbyEntities : Effect<Collection<TestableEntity>>("damage_n
             }
 
             entity.setMetadata("ignore-nearby-damage", plugin.metadataValueFactory.create(true))
-            plugin.scheduler.runLater(5) { entity.removeMetadata("ignore-nearby-damage", plugin) }
+            SchedulerHelper.runTaskLater(plugin, entity, { entity.removeMetadata("ignore-nearby-damage", plugin) }, 5)
 
             if (!damageSelf && (entity == player)) {
                 continue

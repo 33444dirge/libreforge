@@ -1,9 +1,9 @@
 package com.willfp.libreforge.effects.impl
 
-import com.willfp.eco.core.Prerequisite
 import com.willfp.eco.core.config.interfaces.Config
 import com.willfp.eco.util.NumberUtils
 import com.willfp.libreforge.NoCompileData
+import com.willfp.libreforge.SchedulerHelper
 import com.willfp.libreforge.arguments
 import com.willfp.libreforge.getIntFromExpression
 import com.willfp.libreforge.getOrNull
@@ -41,11 +41,7 @@ object EffectRandomTeleport : Effect<NoCompileData>("random_teleport") {
 
         if (loc.y < world.minHeight || loc.y > world.maxHeight) return false
 
-        if (Prerequisite.HAS_PAPER.isMet) {
-            player.teleportAsync(loc)
-        } else {
-            player.teleport(loc)
-        }
+        SchedulerHelper.teleportEntity(player, loc)
 
         return true
     }

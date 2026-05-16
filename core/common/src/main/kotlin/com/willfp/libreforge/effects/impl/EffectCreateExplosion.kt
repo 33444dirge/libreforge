@@ -2,6 +2,7 @@ package com.willfp.libreforge.effects.impl
 
 import com.willfp.eco.core.config.interfaces.Config
 import com.willfp.libreforge.NoCompileData
+import com.willfp.libreforge.SchedulerHelper
 import com.willfp.libreforge.arguments
 import com.willfp.libreforge.effects.Effect
 import com.willfp.libreforge.getDoubleFromExpression
@@ -34,10 +35,10 @@ object EffectCreateExplosion : Effect<NoCompileData>("create_explosion"), Listen
         val breakBlocks = config.getBoolOrNull("break_blocks") ?: true
 
         for (i in 1..amount) {
-            plugin.scheduler.runLater(i.toLong()) {
+            SchedulerHelper.runTaskLater(plugin, location, {
                 world.createExplosion(location, power.toFloat(), fire, breakBlocks, source)
-                }
-            }
+            }, i.toLong())
+        }
         return true
     }
 }

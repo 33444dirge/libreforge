@@ -5,6 +5,7 @@ package com.willfp.libreforge.effects.impl
 import com.willfp.eco.core.config.interfaces.Config
 import com.willfp.eco.util.TeamUtils
 import com.willfp.libreforge.NoCompileData
+import com.willfp.libreforge.SchedulerHelper
 import com.willfp.libreforge.arguments
 import com.willfp.libreforge.effects.Effect
 import com.willfp.libreforge.enumValueOfOrNull
@@ -86,11 +87,11 @@ object EffectGlowNearbyBlocks : Effect<NoCompileData>("glow_nearby_blocks") {
             team.addEntry(shulker.uniqueId.toString())
             block.setMetadata("gnb-uuid", plugin.metadataValueFactory.create(shulker.uniqueId))
 
-            plugin.scheduler.runLater(duration.toLong()) {
+            SchedulerHelper.runTaskLater(plugin, shulker, {
                 team.removeEntry(shulker.uniqueId.toString())
                 shulker.remove()
                 block.removeMetadata("gnb-uuid", plugin)
-            }
+            }, duration.toLong())
         }
 
         return true

@@ -3,6 +3,7 @@ package com.willfp.libreforge.effects.impl
 import com.willfp.eco.core.blocks.Blocks
 import com.willfp.eco.core.config.interfaces.Config
 import com.willfp.libreforge.NoCompileData
+import com.willfp.libreforge.SchedulerHelper
 import com.willfp.libreforge.arguments
 import com.willfp.libreforge.getIntFromExpression
 import com.willfp.libreforge.getOrNull
@@ -30,11 +31,11 @@ object EffectPlaceBlock : Effect<NoCompileData>("place_block") {
             val oldBlock = Blocks.getBlock(block)
             toPlace.place(location)
             val placedType = location.block.type
-            plugin.scheduler.runLater(duration.toLong()) {
+            SchedulerHelper.runTaskLater(plugin, location, {
                 if (location.block.type == placedType) {
                     oldBlock.place(location)
                 }
-            }
+            }, duration.toLong())
         } else {
             toPlace.place(location)
         }

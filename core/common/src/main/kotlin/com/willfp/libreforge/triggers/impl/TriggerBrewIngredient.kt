@@ -3,6 +3,7 @@ package com.willfp.libreforge.triggers.impl
 import com.github.benmanes.caffeine.cache.Caffeine
 import com.willfp.eco.core.gui.player
 import com.willfp.eco.core.recipe.parts.EmptyTestableItem
+import com.willfp.libreforge.SchedulerHelper
 import com.willfp.libreforge.plugin
 import com.willfp.libreforge.toDispatcher
 import com.willfp.libreforge.triggers.Trigger
@@ -35,13 +36,13 @@ object TriggerBrewIngredient : Trigger("brew_ingredient") {
         val location = inventory.location ?: return
         val oldContents = inventory.contents
 
-        plugin.scheduler.runLater(2) {
+        SchedulerHelper.runTaskLater(plugin, location, {
             val newContents = inventory.contents
 
             if (!oldContents.contentEquals(newContents)) {
                 playerCache.put(location, player)
             }
-        }
+        }, 2)
     }
 
     @EventHandler(ignoreCancelled = true)

@@ -4,6 +4,7 @@ import com.willfp.eco.core.integrations.antigrief.AntigriefManager
 import com.willfp.eco.core.placeholder.InjectablePlaceholder
 import com.willfp.libreforge.ConfigurableElement
 import com.willfp.libreforge.DynamicNumericValue
+import com.willfp.libreforge.FoliaRunnableTask
 import com.willfp.libreforge.NamedValue
 import com.willfp.libreforge.conditions.ConditionList
 import com.willfp.libreforge.effects.arguments.EffectArgumentList
@@ -165,14 +166,22 @@ abstract class ElementLike : ConfigurableElement {
         } else {
             // Delay between each repeat.
             var repeats = 0
-            plugin.runnableFactory.create { task ->
+            var task: FoliaRunnableTask? = null
+            task = FoliaRunnableTask(plugin) {
                 repeats++
                 trigger()
 
                 if (repeats >= repeatTimes) {
-                    task.cancel()
+                    task?.cancel()
                 }
-            }.runTaskTimer(delay, delay)
+            }
+
+            val location = data.location ?: data.player?.location ?: data.victim?.location
+            if (location != null) {
+                task.runTask(location, delay, delay)
+            } else {
+                task.runTask(delay, delay)
+            }
         }
 
         // Code here is fucking disgusting duplicating the delay check.

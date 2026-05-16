@@ -1,5 +1,6 @@
 package com.willfp.libreforge.integrations.lands.impl
 
+import com.willfp.libreforge.SchedulerHelper
 import com.willfp.libreforge.plugin
 import com.willfp.libreforge.toDispatcher
 import com.willfp.libreforge.triggers.Trigger
@@ -23,8 +24,8 @@ object TriggerEnterClaim : Trigger("enter_claim") {
         val player = Bukkit.getPlayer(landPlayer.uid) ?: return
         val location = player.location
 
-        Bukkit.getScheduler().runTask(plugin, Runnable { 
-        // TriggerDispatchEvent may only be triggered synchronously.
+        SchedulerHelper.runTask(plugin, location) {
+            // TriggerDispatchEvent may only be triggered synchronously.
             this.dispatch(
                 player.toDispatcher(),
                 TriggerData(
@@ -34,6 +35,6 @@ object TriggerEnterClaim : Trigger("enter_claim") {
                     text = event.area.name
                 )
             )
-        })
+        }
     }
 }

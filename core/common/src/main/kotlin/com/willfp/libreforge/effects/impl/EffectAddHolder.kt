@@ -5,6 +5,7 @@ import com.willfp.eco.core.map.listMap
 import com.willfp.libreforge.Holder
 import com.willfp.libreforge.HolderTemplate
 import com.willfp.libreforge.SimpleProvidedHolder
+import com.willfp.libreforge.SchedulerHelper
 import com.willfp.libreforge.ViolationContext
 import com.willfp.libreforge.arguments
 import com.willfp.libreforge.conditions.Conditions
@@ -44,10 +45,21 @@ object EffectAddHolder : Effect<HolderTemplate>("add_holder") {
 
         holders[dispatcher.uuid].add(holder)
 
-        plugin.scheduler.runLater(duration.toLong()) {
-            holders[dispatcher.uuid].remove(holder)
-            if (holders[dispatcher.uuid].isEmpty()) {
-                holders.remove(dispatcher.uuid)
+        val location = dispatcher.location
+        if (location != null) {
+            SchedulerHelper.runTaskLater(plugin, location, {
+                holders[dispatcher.uuid].remove(holder)
+                if (holders[dispatcher.uuid].isEmpty()) {
+                    holders.remove(dispatcher.uuid)
+                }
+            }, duration.toLong())
+        } else {
+            // 如果没有位置，使用全局调度器（但这在 Folia 上可能不安全）
+            plugin.scheduler.runLater(duration.toLong()) {
+                holders[dispatcher.uuid].remove(holder)
+                if (holders[dispatcher.uuid].isEmpty()) {
+                    holders.remove(dispatcher.uuid)
+                }
             }
         }
 

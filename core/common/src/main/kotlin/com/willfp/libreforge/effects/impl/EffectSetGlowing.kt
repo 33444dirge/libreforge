@@ -2,6 +2,7 @@ package com.willfp.libreforge.effects.impl
 
 import com.willfp.eco.core.config.interfaces.Config
 import com.willfp.libreforge.NoCompileData
+import com.willfp.libreforge.SchedulerHelper
 import com.willfp.libreforge.getIntFromExpression
 import com.willfp.libreforge.getOrNull
 import com.willfp.libreforge.plugin
@@ -22,9 +23,9 @@ object EffectSetGlowing : Effect<NoCompileData>("set_glowing") {
         victim.isGlowing = glowing
 
         if (duration != null && duration > 0) {
-            plugin.scheduler.runLater(duration.toLong()) {
+            SchedulerHelper.runTaskLater(plugin, victim, {
                 victim.isGlowing = !glowing
-            }
+            }, duration.toLong())
         }
 
         return true

@@ -3,6 +3,7 @@ package com.willfp.libreforge.effects.impl
 import com.willfp.eco.core.config.interfaces.Config
 import com.willfp.eco.core.map.listMap
 import com.willfp.libreforge.Dispatcher
+import com.willfp.libreforge.FoliaRunnableTask
 import com.willfp.libreforge.NoCompileData
 import com.willfp.libreforge.ProvidedHolder
 import com.willfp.libreforge.effects.Effect
@@ -37,22 +38,25 @@ object EffectAntigravityProjectile : Effect<NoCompileData>("antigravity_projecti
         val projectile = event.entity
         projectile.setGravity(false)
         val launchSpeed = projectile.velocity.length()
-        plugin.runnableFactory.create { task ->
+        var task: FoliaRunnableTask? = null
+        task = FoliaRunnableTask(plugin, Runnable {
             if (projectile.isDead || projectile.isOnGround) {
-                task.cancel()
-                return@create
+                task?.cancel()
+                return@Runnable
             }
             val velocity = projectile.velocity
             val nextChunk = projectile.location.add(velocity).chunk
             if (!nextChunk.isLoaded) {
                 projectile.setGravity(true)
-                task.cancel()
-                return@create
+                task?.cancel()
+                return@Runnable
             }
             val currentSpeed = velocity.length()
             if (currentSpeed > 0) {
                 projectile.velocity = velocity.multiply(launchSpeed / currentSpeed)
             }
-        }.runTaskTimer(0L, 1L)
+        })
+
+        task.runTask(projectile, 0L, 1L)
     }
 }

@@ -3,6 +3,7 @@ package com.willfp.libreforge.triggers.impl
 import com.willfp.eco.core.Prerequisite
 import com.willfp.eco.core.placeholder.context.placeholderContext
 import com.willfp.eco.util.evaluateExpressionOrNull
+import com.willfp.libreforge.FoliaRunnableTask
 import com.willfp.libreforge.plugin
 import com.willfp.libreforge.toDispatcher
 import com.willfp.libreforge.triggers.Trigger
@@ -34,7 +35,7 @@ object TriggerGroupStatic : TriggerGroup("static") {
     }
 
     override fun postRegister() {
-        plugin.scheduler.runTimer(1, 1) {
+        val task = FoliaRunnableTask(plugin) {
             tick++
 
             for ((interval, trigger) in registry) {
@@ -51,6 +52,8 @@ object TriggerGroupStatic : TriggerGroup("static") {
                 }
             }
         }
+
+        task.runTask(1L, 1L)
     }
 
     private class TriggerStatic(interval: Int) : Trigger("static_$interval") {

@@ -1,5 +1,6 @@
 package com.willfp.libreforge.effects.impl
 
+import com.willfp.libreforge.SchedulerHelper
 import com.willfp.libreforge.effects.templates.ChanceMultiplierEffect
 import com.willfp.libreforge.plugin
 import com.willfp.libreforge.toDispatcher
@@ -18,8 +19,8 @@ object EffectDontConsumeXpChance : ChanceMultiplierEffect("dont_consume_xp_chanc
         }
 
         // 2 Ticks because that's what I did in EcoSkills!
-        plugin.scheduler.runLater(2) {
+        SchedulerHelper.runTaskLater(plugin, player, {
             player.giveExpLevels(cost)
-        }
+        }, 2)
     }
 }

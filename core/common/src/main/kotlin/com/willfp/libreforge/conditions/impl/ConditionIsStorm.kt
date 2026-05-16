@@ -4,7 +4,9 @@ import com.willfp.eco.core.config.interfaces.Config
 import com.willfp.libreforge.Dispatcher
 import com.willfp.libreforge.NoCompileData
 import com.willfp.libreforge.ProvidedHolder
+import com.willfp.libreforge.SchedulerHelper
 import com.willfp.libreforge.conditions.Condition
+import com.willfp.libreforge.plugin
 import com.willfp.libreforge.toDispatcher
 import com.willfp.libreforge.updateEffects
 import org.bukkit.event.EventHandler
@@ -25,7 +27,9 @@ object ConditionIsStorm: Condition<NoCompileData>("is_storm") {
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     fun handle(event: WeatherChangeEvent) {
         for (entity in event.world.entities) {
-            entity.toDispatcher().updateEffects()
+            SchedulerHelper.runTask(plugin, entity) {
+                entity.toDispatcher().updateEffects()
+            }
         }
     }
 }
