@@ -29,7 +29,8 @@ class DispatchedTriggerFactory(
             return null
         }
 
-        dispatcherTriggers[dispatcher.uuid].add(hash)
+        val list = dispatcherTriggers.getOrPut(dispatcher.uuid) { mutableListOf() }
+        list.add(hash)
         val dispatchData = if (data.dispatcher == dispatcher) data else data.copy(dispatcher = dispatcher)
         return DispatchedTrigger(dispatcher, trigger, dispatchData)
     }
