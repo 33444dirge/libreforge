@@ -110,7 +110,7 @@ object EffectParticleAnimation : Effect<ParticleAnimationBlock<*>?>("particle_an
             tick++
         }
 
-        task.runTaskAsynchronously(1L, 1L)
+        task.runTask(entity, 1L, 1L)
 
         return true
     }

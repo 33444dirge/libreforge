@@ -4,6 +4,7 @@ import com.willfp.eco.core.Prerequisite
 import com.willfp.eco.core.placeholder.context.placeholderContext
 import com.willfp.eco.util.evaluateExpressionOrNull
 import com.willfp.libreforge.FoliaRunnableTask
+import com.willfp.libreforge.SchedulerHelper
 import com.willfp.libreforge.plugin
 import com.willfp.libreforge.toDispatcher
 import com.willfp.libreforge.triggers.Trigger
@@ -41,14 +42,18 @@ object TriggerGroupStatic : TriggerGroup("static") {
             for ((interval, trigger) in registry) {
                 if (tick % interval == 0) {
                     for (player in Bukkit.getOnlinePlayers()) {
-                        trigger.dispatchFor(player)
+                        SchedulerHelper.runTask(plugin, player) {
+                            trigger.dispatchFor(player)
+                        }
                     }
                 }
             }
 
             for ((_, trigger) in dynamicRegistry) {
                 for (player in Bukkit.getOnlinePlayers()) {
-                    trigger.dispatchIfMet(player, tick)
+                    SchedulerHelper.runTask(plugin, player) {
+                        trigger.dispatchIfMet(player, tick)
+                    }
                 }
             }
         }

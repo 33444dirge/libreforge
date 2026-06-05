@@ -24,7 +24,8 @@ class DispatchedTriggerFactory(
         }
 
         val hash = (trigger.hashCode() shl 5) xor data.hashCode()
-        if (hash in dispatcherTriggers[dispatcher.uuid]) {
+        val triggerList = dispatcherTriggers[dispatcher.uuid]
+        if (triggerList != null && hash in triggerList) {
             return null
         }
 
