@@ -1,10 +1,10 @@
 package com.willfp.libreforge.triggers
 
 import com.willfp.eco.core.EcoPlugin
-import com.willfp.eco.core.map.listMap
 import com.willfp.libreforge.Dispatcher
 import com.willfp.libreforge.FoliaRunnableTask
 import java.util.UUID
+import java.util.concurrent.ConcurrentHashMap
 
 /*
 
@@ -15,7 +15,7 @@ Prevents multiple identical triggers from being triggered in the same tick.
 class DispatchedTriggerFactory(
     private val plugin: EcoPlugin
 ) {
-    private val dispatcherTriggers = listMap<UUID, Int>()
+    private val dispatcherTriggers = ConcurrentHashMap<UUID, MutableList<Int>>()
 
 
     fun create(dispatcher: Dispatcher<*>, trigger: Trigger, data: TriggerData): DispatchedTrigger? {
@@ -24,12 +24,12 @@ class DispatchedTriggerFactory(
         }
 
         val hash = (trigger.hashCode() shl 5) xor data.hashCode()
-        val triggerList = dispatcherTriggers[dispatcher.uuid]
-        if (triggerList != null && hash in triggerList) {
+        val uuid = dispatcher.uuid
+
+        val list = dispatcherTriggers.computeIfAbsent(uuid) { mutableListOf() }
+        if (hash in list) {
             return null
         }
-
-        val list = dispatcherTriggers.getOrPut(dispatcher.uuid) { mutableListOf() }
         list.add(hash)
         val dispatchData = if (data.dispatcher == dispatcher) data else data.copy(dispatcher = dispatcher)
         return DispatchedTrigger(dispatcher, trigger, dispatchData)
