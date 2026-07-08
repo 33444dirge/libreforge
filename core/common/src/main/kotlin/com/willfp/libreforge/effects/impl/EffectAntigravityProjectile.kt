@@ -15,6 +15,8 @@ import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 
 object EffectAntigravityProjectile : Effect<NoCompileData>("antigravity_projectile") {
+    override val description = "Makes all projectiles the player fires travel in a straight line, unaffected by gravity."
+    override val categories = setOf("combat")
     private val players = ConcurrentHashMap<UUID, MutableList<UUID>>()
 
     override fun onEnable(

@@ -20,11 +20,24 @@ import org.bukkit.event.EventPriority
 import org.bukkit.event.block.BlockDropItemEvent
 
 object TriggerBlockItemDrop : Trigger("block_item_drop") {
+    override val description = "Fires when a block broken by the player drops its items."
+
+    override val categories = setOf("world")
+
+    override val parameterDescriptions = mapOf(
+        TriggerParameter.BLOCK to "The block that was broken.",
+        TriggerParameter.LOCATION to "The location of the broken block.",
+        TriggerParameter.ITEM to "Empty — the drops are exposed through the drop count, not a single item.",
+        TriggerParameter.VALUE to "The total number of items dropped."
+    )
+
     override val parameters = setOf(
         TriggerParameter.PLAYER,
         TriggerParameter.BLOCK,
         TriggerParameter.EVENT,
-        TriggerParameter.LOCATION
+        TriggerParameter.LOCATION,
+        TriggerParameter.ITEM,
+        TriggerParameter.VALUE
     )
 
     @EventHandler(
@@ -58,6 +71,7 @@ object TriggerBlockItemDrop : Trigger("block_item_drop") {
             context = DropContext(
                 player = player,
                 block = brokenBlock,
+                blockState = event.blockState,
                 tool = player.inventory.itemInMainHand
             ),
             dropLocation = block.location,
@@ -87,6 +101,21 @@ object TriggerBlockItemDrop : Trigger("block_item_drop") {
         for (item in event.items) {
             val stack = itemEntityToStack[item] ?: continue
             item.setItemStack(stack)
+        }
+
+        // Drops added by effects (e.g. drop_item with add_to_drops) have no backing
+        // item entity, so the loop above can't emit them. Push them through a
+        // DropQueue (telekinesis-aware). These stacks already have their modifiers
+        // applied in place by the `dropResults` read above, so we must NOT read
+        // editableEvent.items again here or modifiers would be applied twice.
+        val addedStacks = remainingDrops.filter { stack ->
+            itemEntityToStack.values.none { it === stack }
+        }
+        if (addedStacks.isNotEmpty()) {
+            DropQueue(player)
+                .setLocation(block.location)
+                .addItems(addedStacks)
+                .push()
         }
 
         val totalXP = dropResults.sumOf { it.xp }

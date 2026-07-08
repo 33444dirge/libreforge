@@ -11,6 +11,19 @@ import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 
 object TriggerCollideWithEntity : Trigger("collide_with_entity") {
+    override val description = "Fires when the player physically collides with a nearby entity."
+
+    override val categories = setOf("movement")
+
+    override val additionalInfo = listOf(
+        "Has a 500ms cooldown per unique player-entity pair to prevent rapid repeated firing."
+    )
+
+    override val parameterDescriptions = mapOf(
+        TriggerParameter.VICTIM to "The entity the player collided with.",
+        TriggerParameter.LOCATION to "The player's location during the collision."
+    )
+
     override val parameters = setOf(
         TriggerParameter.PLAYER,
         TriggerParameter.VICTIM,

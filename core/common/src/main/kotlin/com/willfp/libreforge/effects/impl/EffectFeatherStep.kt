@@ -14,6 +14,9 @@ import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 
 object EffectFeatherStep : Effect<NoCompileData>("feather_step") {
+    override val description = "Prevents the player trampling crops."
+    override val categories = setOf("movement", "player")
+
     private val players = ConcurrentHashMap<UUID, MutableList<UUID>>()
 
     override fun onEnable(

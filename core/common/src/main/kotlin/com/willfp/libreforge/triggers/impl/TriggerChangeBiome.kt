@@ -13,6 +13,15 @@ import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 
 object TriggerChangeBiome : Trigger("change_biome") {
+    override val description = "Fires when the player moves into a different biome."
+
+    override val categories = setOf("world", "movement")
+
+    override val parameterDescriptions = mapOf(
+        TriggerParameter.LOCATION to "The player's location.",
+        TriggerParameter.TEXT to "The key of the new biome."
+    )
+
     override val parameters = setOf(
         TriggerParameter.PLAYER,
         TriggerParameter.LOCATION,

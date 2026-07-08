@@ -5,6 +5,8 @@ import com.willfp.libreforge.mutators.MutatorList
 import com.willfp.libreforge.triggers.impl.TriggerAltClick
 import com.willfp.libreforge.triggers.impl.TriggerBite
 import com.willfp.libreforge.triggers.impl.TriggerBlockItemDrop
+import com.willfp.libreforge.triggers.impl.TriggerBlockXpDrop
+import com.willfp.libreforge.triggers.impl.TriggerEntityXpDrop
 import com.willfp.libreforge.triggers.impl.TriggerBoneMealCrop
 import com.willfp.libreforge.triggers.impl.TriggerBowAttack
 import com.willfp.libreforge.triggers.impl.TriggerBreed
@@ -74,8 +76,10 @@ import com.willfp.libreforge.triggers.impl.TriggerLoseHunger
 import com.willfp.libreforge.triggers.impl.TriggerLosePotionEffect
 import com.willfp.libreforge.triggers.impl.TriggerMeleeAttack
 import com.willfp.libreforge.triggers.impl.TriggerMineBlock
+import com.willfp.libreforge.triggers.impl.TriggerMineBlockCascade
 import com.willfp.libreforge.triggers.impl.TriggerMineBlockProgress
 import com.willfp.libreforge.triggers.impl.TriggerMove
+import com.willfp.libreforge.triggers.impl.TriggerMoveItem
 import com.willfp.libreforge.triggers.impl.TriggerNoteBlockPlay
 import com.willfp.libreforge.triggers.impl.TriggerPickUpItem
 import com.willfp.libreforge.triggers.impl.TriggerPlaceBlock
@@ -97,6 +101,7 @@ import com.willfp.libreforge.triggers.impl.TriggerSneakLeftClick
 import com.willfp.libreforge.triggers.impl.TriggerShootBow
 import com.willfp.libreforge.triggers.impl.TriggerSmelt
 import com.willfp.libreforge.triggers.impl.TriggerSmithItem
+import com.willfp.libreforge.triggers.impl.TriggerStartSwimming
 import com.willfp.libreforge.triggers.impl.TriggerSwapHands
 import com.willfp.libreforge.triggers.impl.TriggerTakeDamage
 import com.willfp.libreforge.triggers.impl.TriggerTakeEntityDamage
@@ -159,6 +164,8 @@ object Triggers : Registry<Trigger>() {
         register(TriggerAltClick)
         register(TriggerBite)
         register(TriggerBlockItemDrop)
+        register(TriggerBlockXpDrop)
+        register(TriggerEntityXpDrop)
         register(TriggerBoneMealCrop)
         register(TriggerBowAttack)
         register(TriggerBreed)
@@ -225,8 +232,10 @@ object Triggers : Registry<Trigger>() {
         register(TriggerLosePotionEffect)
         register(TriggerMeleeAttack)
         register(TriggerMineBlock)
+        register(TriggerMineBlockCascade)
         register(TriggerMineBlockProgress)
         register(TriggerMove)
+        register(TriggerMoveItem)
         register(TriggerNoteBlockPlay)
         register(TriggerPickUpItem)
         register(TriggerPlaceBlock)
@@ -249,6 +258,7 @@ object Triggers : Registry<Trigger>() {
         register(TriggerSneakAltClick)
         register(TriggerSneakLeftClick)
         register(TriggerSmithItem)
+        register(TriggerStartSwimming)
         register(TriggerSwapHands)
         register(TriggerTameAnimal)
         register(TriggerTeleport)
@@ -259,6 +269,5 @@ object Triggers : Registry<Trigger>() {
         register(TriggerWinRaid)
         register(TriggerTakeDamage)
         register(TriggerTakeEntityDamage)
-        TriggerTakeDamage.notifyOfEntityDamageChange()
     }
 }

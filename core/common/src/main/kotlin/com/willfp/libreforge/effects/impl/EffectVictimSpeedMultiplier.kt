@@ -1,6 +1,7 @@
 package com.willfp.libreforge.effects.impl
 
 import com.willfp.eco.core.config.interfaces.Config
+import com.willfp.libreforge.ArgType
 import com.willfp.libreforge.NoCompileData
 import com.willfp.libreforge.SchedulerHelper
 import com.willfp.libreforge.arguments
@@ -13,6 +14,9 @@ import com.willfp.libreforge.triggers.TriggerParameter
 import org.bukkit.attribute.Attribute
 
 object EffectVictimSpeedMultiplier : Effect<NoCompileData>("victim_speed_multiplier") {
+    override val description = "Temporarily multiplies the victim's movement speed for a given duration."
+    override val categories = setOf("movement", "combat", "attribute")
+
     private const val META_KEY = "libreforge-vms"
 
     override val parameters = setOf(
@@ -20,8 +24,18 @@ object EffectVictimSpeedMultiplier : Effect<NoCompileData>("victim_speed_multipl
     )
 
     override val arguments = arguments {
-        require("multiplier", "You must specify the speed multiplier!")
-        require("duration", "You must specify the duration!")
+        require(
+            "multiplier",
+            "You must specify the speed multiplier!",
+            description = "The value to multiply the victim's movement speed by. Supports expressions.",
+            type = ArgType.EXPRESSION
+        )
+        require(
+            "duration",
+            "You must specify the duration!",
+            description = "How many ticks the speed change lasts. Supports expressions.",
+            type = ArgType.EXPRESSION
+        )
     }
 
     override fun onTrigger(config: Config, data: TriggerData, compileData: NoCompileData): Boolean {

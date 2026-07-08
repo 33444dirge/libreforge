@@ -3,6 +3,7 @@ package com.willfp.libreforge
 import com.willfp.eco.core.Eco
 import com.willfp.eco.core.EcoPlugin
 import com.willfp.eco.core.Prerequisite
+import com.willfp.eco.core.bstats.EcoMetricsChart
 import com.willfp.eco.core.command.impl.PluginCommand
 import com.willfp.eco.core.display.DisplayModule
 import com.willfp.eco.core.integrations.IntegrationLoader
@@ -12,6 +13,7 @@ import com.willfp.eco.core.entities.Entities
 import com.willfp.eco.core.items.Items
 import com.willfp.eco.util.ClassUtils
 import com.willfp.libreforge.commands.CommandLibreforge
+import com.willfp.libreforge.conditions.Conditions
 import com.willfp.libreforge.commands.custom.CustomCommands
 import com.willfp.libreforge.configs.ChainsYml
 import com.willfp.libreforge.configs.CommandsYml
@@ -22,15 +24,18 @@ import com.willfp.libreforge.display.ItemFlagDisplay
 import com.willfp.libreforge.effects.Effects
 import com.willfp.libreforge.effects.arguments.custom.CustomEffectArguments
 import com.willfp.libreforge.effects.impl.bossbar.BossBarProgressPlaceholder
+import com.willfp.libreforge.filters.Filters
 import com.willfp.libreforge.integrations.auraskills.AuraSkillsIntegration
 import com.willfp.libreforge.integrations.axplugins.axenvoy.AxEnvoyIntegration
 import com.willfp.libreforge.integrations.axplugins.axtrade.AxTradeIntegration
 import com.willfp.libreforge.integrations.bettermodel.BetterModelIntegration
 import com.willfp.libreforge.integrations.citizens.CitizensIntegration
+import com.willfp.libreforge.integrations.custom_blocks.craftengine.CraftEngineIntegration
+import com.willfp.libreforge.integrations.custom_blocks.itemsadder.ItemsAdderIntegration
 import com.willfp.libreforge.integrations.custom_blocks.nexo.NexoIntegration
 import com.willfp.libreforge.integrations.custom_blocks.oraxen.OraxenIntegration
-import com.willfp.libreforge.integrations.custombiomes.impl.CustomBiomesTerra
-import com.willfp.libreforge.integrations.custombiomes.impl.CustomBiomesTerraformGenerator
+import com.willfp.libreforge.integrations.terra.TerraIntegration
+import com.willfp.libreforge.integrations.terraformgenerator.TerraformGeneratorIntegration
 import com.willfp.libreforge.integrations.edprisoncore.EdPrisonCoreIntegration
 import com.willfp.libreforge.integrations.fancynpcs.FancyNPCsIntegration
 import com.willfp.libreforge.integrations.huskintegration.huskclaims.HuskClaimsIntegration
@@ -52,8 +57,10 @@ import com.willfp.libreforge.integrations.vault.VaultIntegration
 import com.willfp.libreforge.integrations.votifier.VotifierIntegration
 import com.willfp.libreforge.integrations.worldguard.WorldGuardIntegration
 import com.willfp.libreforge.integrations.xiaomomiplugins.customcrops.CustomCropsIntegration
+import com.willfp.libreforge.integrations.pyrofishingpro.PyroFishingProIntegration
 import com.willfp.libreforge.integrations.xiaomomiplugins.customfishing.CustomFishingIntegration
 import com.willfp.libreforge.levels.LevelTypes
+import com.willfp.libreforge.mutators.Mutators
 import com.willfp.libreforge.levels.placeholder.ItemDataPlaceholder
 import com.willfp.libreforge.levels.placeholder.ItemLevelPlaceholder
 import com.willfp.libreforge.levels.placeholder.ItemPointsPlaceholder
@@ -65,6 +72,7 @@ import com.willfp.libreforge.tags.CustomBlockTag
 import com.willfp.libreforge.tags.CustomEntityTag
 import com.willfp.libreforge.tags.CustomTag
 import com.willfp.libreforge.triggers.DispatchedTriggerFactory
+import com.willfp.libreforge.triggers.Triggers
 import org.bukkit.Bukkit
 import org.bukkit.entity.LivingEntity
 import org.bukkit.event.Listener
@@ -243,8 +251,8 @@ class LibreforgeSpigotPlugin : EcoPlugin() {
             IntegrationLoader("Vault") { VaultIntegration.load(this) },
             IntegrationLoader("WorldGuard") { WorldGuardIntegration.load(this) },
             IntegrationLoader("TAB") { TabIntegration.load(this) },
-            IntegrationLoader("Terra") { CustomBiomesTerra.load(this) },
-            IntegrationLoader("TerraformGenerator") { CustomBiomesTerraformGenerator.load(this) },
+            IntegrationLoader("Terra") { TerraIntegration.load(this) },
+            IntegrationLoader("TerraformGenerator") { TerraformGeneratorIntegration.load(this) },
             IntegrationLoader("AxEnvoy") { AxEnvoyIntegration.load(this) },
             IntegrationLoader("AxTrade") { AxTradeIntegration.load(this) },
             IntegrationLoader("Votifier") { VotifierIntegration.load(this) },
@@ -256,13 +264,25 @@ class LibreforgeSpigotPlugin : EcoPlugin() {
             IntegrationLoader("HuskClaims") { HuskClaimsIntegration.load(this) },
             IntegrationLoader("CustomCrops") { CustomCropsIntegration.load(this) },
             IntegrationLoader("CustomFishing") { CustomFishingIntegration.load(this) },
+            IntegrationLoader("PyroFishingPro") { PyroFishingProIntegration.load(this) },
             IntegrationLoader("Lands") { LandsIntegration.load(this) },
             IntegrationLoader("EdPrison") { EdPrisonCoreIntegration.load(this) },
             IntegrationLoader("MythicMobs") { MythicMobsIntegration.load(this) },
             IntegrationLoader("Nexo") { NexoIntegration.load(this) },
-            IntegrationLoader("Oraxen") { OraxenIntegration.load(this)}
+            IntegrationLoader("Oraxen") { OraxenIntegration.load(this) },
+            IntegrationLoader("ItemsAdder") { ItemsAdderIntegration.load(this) },
+            IntegrationLoader("CraftEngine") { CraftEngineIntegration.load(this) }
         )
     }
+
+    override fun getCustomCharts() = listOf(
+        EcoMetricsChart.SingleLine("total_conditions") { Conditions.values().size },
+        EcoMetricsChart.SingleLine("total_effects") { Effects.values().size },
+        EcoMetricsChart.SingleLine("total_triggers") { Triggers.values().size },
+        EcoMetricsChart.SingleLine("total_filters") { Filters.values().size },
+        EcoMetricsChart.SingleLine("total_mutators") { Mutators.values().size },
+        EcoMetricsChart.SingleLine("loaded_libreforge_plugins") { Plugins.values().size }
+    )
 
     override fun loadPluginCommands(): List<PluginCommand> {
         return listOf(

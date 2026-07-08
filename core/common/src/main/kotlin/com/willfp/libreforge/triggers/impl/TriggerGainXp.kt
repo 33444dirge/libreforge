@@ -12,10 +12,19 @@ import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 
 object TriggerGainXp : Trigger("gain_xp") {
+    override val description = "Fires when the player gains experience points."
+
+    override val categories = setOf("player")
+
+    override val parameterDescriptions = mapOf(
+        TriggerParameter.VALUE to "The amount of experience gained."
+    )
+
     override val parameters = setOf(
         TriggerParameter.PLAYER,
         TriggerParameter.EVENT,
-        TriggerParameter.LOCATION
+        TriggerParameter.LOCATION,
+        TriggerParameter.VALUE
     )
 
     private val telekinesisGranted = ConcurrentHashMap.newKeySet<UUID>()

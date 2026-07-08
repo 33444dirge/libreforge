@@ -5,9 +5,11 @@ import com.willfp.eco.core.drops.DropQueue
 import com.willfp.eco.core.events.EntityDeathByEntityEvent
 import com.willfp.eco.core.integrations.antigrief.AntigriefManager
 import com.willfp.eco.util.TelekinesisUtils
+import com.willfp.libreforge.ArgType
 import com.willfp.libreforge.Dispatcher
 import com.willfp.libreforge.NoCompileData
 import com.willfp.libreforge.ProvidedHolder
+import com.willfp.libreforge.arguments
 import com.willfp.libreforge.effects.Effect
 import com.willfp.libreforge.effects.Identifiers
 import com.willfp.libreforge.plugin
@@ -29,6 +31,18 @@ import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 
 object EffectTelekinesis : Effect<NoCompileData>("telekinesis") {
+    override val description = "Automatically sends all drops and XP from blocks, entities, and fishing directly to the player's inventory."
+    override val categories = setOf("inventory")
+
+    override val arguments = arguments {
+        optional(
+            "on_tamed_mob_kills",
+            description = "If true, telekinesis also applies when a tamed mob kills an entity.",
+            type = ArgType.BOOLEAN,
+            default = "false"
+        )
+    }
+
     private val players = ConcurrentHashMap<UUID, MutableList<UUID>>()
     private var allowTamedMobKills: Boolean = false
 
@@ -136,7 +150,10 @@ object EffectTelekinesis : Effect<NoCompileData>("telekinesis") {
             return
         }
 
-        val xp = event.xp
+        // Read the live droppedExp rather than the EntityDeathByEntityEvent.xp
+        // snapshot so that modifications from earlier handlers (e.g. the
+        // entity_xp_drop trigger) are respected.
+        val xp = event.deathEvent.droppedExp
         val drops = event.drops.filterNotNull()
 
         DropQueue(player)

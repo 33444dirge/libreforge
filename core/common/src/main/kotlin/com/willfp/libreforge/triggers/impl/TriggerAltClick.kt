@@ -18,13 +18,28 @@ import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 
 object TriggerAltClick : Trigger("alt_click") {
+    override val description = "Fires when the player right-clicks with an item in hand, or left-clicks with a bow, rod, or trident."
+
+    override val categories = setOf("interaction")
+
+    override val additionalInfo = listOf(
+        "Does not fire when clicking interactive blocks such as crafting tables, doors, chests, and similar."
+    )
+
+    override val parameterDescriptions = mapOf(
+        TriggerParameter.VICTIM to "The entity the player is looking at, if any.",
+        TriggerParameter.LOCATION to "The location the player aimed at.",
+        TriggerParameter.ITEM to "The item in the player's main hand.",
+        TriggerParameter.BLOCK to "The block the player clicked or aimed at, if any."
+    )
+
     override val parameters = setOf(
         TriggerParameter.PLAYER,
         TriggerParameter.VICTIM,
-        TriggerParameter.LOCATION,
+        TriggerParameter.BLOCK,
         TriggerParameter.EVENT,
-        TriggerParameter.ITEM,
-        TriggerParameter.BLOCK
+        TriggerParameter.LOCATION,
+        TriggerParameter.ITEM
     )
 
     private val LEFT_CLICK_ITEMS = listOf(

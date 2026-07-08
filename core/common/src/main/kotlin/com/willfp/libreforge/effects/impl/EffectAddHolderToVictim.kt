@@ -1,6 +1,8 @@
 package com.willfp.libreforge.effects.impl
 
 import com.willfp.eco.core.config.interfaces.Config
+import com.willfp.eco.core.map.listMap
+import com.willfp.libreforge.ArgType
 import com.willfp.libreforge.Holder
 import com.willfp.libreforge.HolderTemplate
 import com.willfp.libreforge.SimpleProvidedHolder
@@ -24,13 +26,31 @@ import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 
 object EffectAddHolderToVictim : Effect<HolderTemplate>("add_holder_to_victim") {
+    override val description = "Temporarily applies a set of effects and conditions to the victim for a given duration."
+    override val categories = setOf("meta")
+
     override val parameters = setOf(
         TriggerParameter.VICTIM
     )
 
     override val arguments = arguments {
-        require("effects", "You must specify the effects!")
-        require("duration", "You must specify the duration (in ticks)!")
+        require(
+            "effects",
+            "You must specify the effects!",
+            description = "The effects to apply temporarily to the victim.",
+            type = ArgType.EFFECT_LIST
+        )
+        require(
+            "duration",
+            "You must specify the duration (in ticks)!",
+            description = "How long to apply the holder, in ticks. Supports expressions.",
+            type = ArgType.EXPRESSION
+        )
+        optional(
+            "conditions",
+            description = "The conditions the holder requires to be active.",
+            type = ArgType.CONDITION_LIST
+        )
     }
 
     private val holders = ConcurrentHashMap<UUID, MutableList<Holder>>()

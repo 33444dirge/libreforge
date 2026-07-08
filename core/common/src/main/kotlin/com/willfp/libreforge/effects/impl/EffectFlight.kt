@@ -12,6 +12,9 @@ import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 
 object EffectFlight : Effect<NoCompileData>("flight") {
+    override val description = "Grants the player the ability to fly while the holder is active."
+    override val categories = setOf("movement", "player")
+
     override val shouldReload = false
 
     private val players = ConcurrentHashMap<UUID, MutableList<UUID>>()

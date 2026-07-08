@@ -12,6 +12,9 @@ import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 
 object EffectKeepInventory : Effect<NoCompileData>("keep_inventory") {
+    override val description = "Prevents the player from dropping their inventory on death."
+    override val categories = setOf("player", "inventory")
+
     private val players = ConcurrentHashMap<UUID, MutableList<UUID>>()
 
     override fun onEnable(

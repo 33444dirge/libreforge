@@ -2,6 +2,7 @@ package com.willfp.libreforge.effects.impl
 
 import com.willfp.eco.core.config.interfaces.Config
 import com.willfp.libreforge.FoliaRunnableTask
+import com.willfp.libreforge.ArgType
 import com.willfp.libreforge.NoCompileData
 import com.willfp.libreforge.SchedulerHelper
 import com.willfp.libreforge.arguments
@@ -14,12 +15,20 @@ import org.bukkit.Bukkit
 import org.bukkit.Location
 
 object EffectTraceback : Effect<NoCompileData>("traceback") {
+    override val description = "Teleports the player back to where they were a specified number of seconds ago."
+    override val categories = setOf("movement")
+
     override val parameters = setOf(
         TriggerParameter.PLAYER
     )
 
     override val arguments = arguments {
-        require("seconds", "You must specify the amount of seconds to go back in time (1-30)!")
+        require(
+            "seconds",
+            "You must specify the amount of seconds to go back in time (1-30)!",
+            description = "How many seconds into the past to teleport the player (clamped to 1鈥?0). Supports expressions.",
+            type = ArgType.EXPRESSION
+        )
     }
 
     private const val key = "libreforge_traceback"

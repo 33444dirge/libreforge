@@ -19,6 +19,9 @@ import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 
 object EffectNexoTelekinesis : Effect<NoCompileData>("telekinesis") {
+    override val description = "Causes Nexo block and furniture drops to go directly into the player's inventory instead of dropping on the ground."
+    override val categories = setOf("inventory")
+
     private val players = ConcurrentHashMap<UUID, MutableList<UUID>>()
 
     override fun onEnable(

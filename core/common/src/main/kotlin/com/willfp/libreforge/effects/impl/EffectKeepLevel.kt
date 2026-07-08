@@ -12,6 +12,9 @@ import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 
 object EffectKeepLevel : Effect<NoCompileData>("keep_level") {
+    override val description = "Prevents the player from losing their XP levels on death."
+    override val categories = setOf("economy", "player")
+
     private val players = ConcurrentHashMap<UUID, MutableList<UUID>>()
 
     override fun onEnable(
