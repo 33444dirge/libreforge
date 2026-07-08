@@ -10,17 +10,19 @@ import org.bukkit.event.EventHandler
 import org.bukkit.event.entity.EntityDamageByEntityEvent
 import org.bukkit.event.entity.EntityDamageEvent
 import java.util.UUID
+import java.util.concurrent.ConcurrentHashMap
 
 object TriggerMeleeAttack : Trigger("melee_attack") {
     override val parameters = setOf(
         TriggerParameter.PLAYER,
         TriggerParameter.VICTIM,
-        TriggerParameter.LOCATION,
+        TriggerParameter.VALUE,
         TriggerParameter.EVENT,
-        TriggerParameter.ITEM
+        TriggerParameter.ITEM,
+        TriggerParameter.LOCATION
     )
 
-    private val processedEvents = mutableSetOf<UUID>()
+    private val processedEvents = ConcurrentHashMap.newKeySet<UUID>()
 
     @EventHandler(ignoreCancelled = true)
     fun handle(event: EntityDamageByEntityEvent) {

@@ -37,19 +37,30 @@ object ItemRefreshListener : Listener {
             }
         }
 
-        event.entity.toDispatcher().refreshHolders()
+        val entity = event.entity
+        val dispatcher = entity.toDispatcher()
+        SchedulerHelper.runTask(plugin, entity) {
+            dispatcher.refreshHolders()
+        }
     }
 
     @EventHandler(priority = EventPriority.LOWEST)
     fun onPlayerJoin(event: PlayerJoinEvent) {
         Bukkit.getServer().onlinePlayers.forEach {
-            it.toDispatcher().refreshHolders()
+            val dispatcher = it.toDispatcher()
+            SchedulerHelper.runTask(plugin, it) {
+                dispatcher.refreshHolders()
+            }
         }
     }
 
     @EventHandler(priority = EventPriority.HIGHEST)
     fun onInventoryDrop(event: PlayerDropItemEvent) {
-        event.player.toDispatcher().refreshHolders()
+        val player = event.player
+        val dispatcher = player.toDispatcher()
+        SchedulerHelper.runTask(plugin, player) {
+            dispatcher.refreshHolders()
+        }
     }
 
     @EventHandler(priority = EventPriority.LOWEST)
@@ -66,19 +77,27 @@ object ItemRefreshListener : Listener {
 
         val dispatcher = player.toDispatcher()
 
-        plugin.scheduler.run {
+        SchedulerHelper.runTask(plugin, player) {
             dispatcher.refreshHolders()
         }
     }
 
     @EventHandler
     fun onRespawn(event: PlayerRespawnEvent) {
-        event.player.toDispatcher().refreshHolders()
+        val player = event.player
+        val dispatcher = player.toDispatcher()
+        SchedulerHelper.runTask(plugin, player) {
+            dispatcher.refreshHolders()
+        }
     }
 
     @EventHandler
     fun onArmorChange(event: ArmorChangeEvent) {
-        event.player.toDispatcher().refreshHolders()
+        val player = event.player
+        val dispatcher = player.toDispatcher()
+        SchedulerHelper.runTask(plugin, player) {
+            dispatcher.refreshHolders()
+        }
     }
 
     @EventHandler(priority = EventPriority.LOWEST)
@@ -91,6 +110,9 @@ object ItemRefreshListener : Listener {
 
         inventoryClickTimeouts.put(player.uniqueId, Unit)
 
-        player.toDispatcher().refreshHolders()
+        val dispatcher = player.toDispatcher()
+        SchedulerHelper.runTask(plugin, player) {
+            dispatcher.refreshHolders()
+        }
     }
 }

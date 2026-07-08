@@ -1,7 +1,6 @@
 package com.willfp.libreforge.effects.impl
 
 import com.willfp.eco.core.config.interfaces.Config
-import com.willfp.eco.core.map.listMap
 import com.willfp.libreforge.Dispatcher
 import com.willfp.libreforge.NoCompileData
 import com.willfp.libreforge.ProvidedHolder
@@ -14,6 +13,7 @@ import org.bukkit.event.EventHandler
 import org.bukkit.event.EventPriority
 import org.bukkit.event.entity.EntityShootBowEvent
 import java.util.UUID
+import java.util.concurrent.ConcurrentHashMap
 import kotlin.math.min
 
 object EffectRapidBows : Effect<NoCompileData>("rapid_bows") {
@@ -21,7 +21,7 @@ object EffectRapidBows : Effect<NoCompileData>("rapid_bows") {
         require("percent_faster", "You must specify how many percent faster to make bow pulls!")
     }
 
-    private val modifiers = listMap<UUID, IdentifiedModifier>()
+    private val modifiers = ConcurrentHashMap<UUID, List<IdentifiedModifier>>()
 
     private const val MAX_FORCE = 3.0
 
@@ -32,13 +32,19 @@ object EffectRapidBows : Effect<NoCompileData>("rapid_bows") {
         holder: ProvidedHolder,
         compileData: NoCompileData
     ) {
-        modifiers[dispatcher.uuid].add(IdentifiedModifier(identifiers.uuid) {
+        val modifier = IdentifiedModifier(identifiers.uuid) {
             config.getDoubleFromExpression("percent_faster", dispatcher.get())
-        })
+        }
+        modifiers.compute(dispatcher.uuid) { _, existing ->
+            (existing ?: emptyList()) + modifier
+        }
     }
 
     override fun onDisable(dispatcher: Dispatcher<*>, identifiers: Identifiers, holder: ProvidedHolder) {
-        modifiers[dispatcher.uuid].removeIf { it.uuid == identifiers.uuid }
+        modifiers.computeIfPresent(dispatcher.uuid) { _, existing ->
+            existing.filter { it.uuid != identifiers.uuid }
+                .ifEmpty { null }
+        }
     }
 
     @EventHandler(
@@ -49,7 +55,8 @@ object EffectRapidBows : Effect<NoCompileData>("rapid_bows") {
         val entity = event.entity
 
         val totalPercentFaster = modifiers[entity.uniqueId]
-            .sumOf { it.modifier }
+            ?.sumOf { it.modifier }
+            ?: 0.0
             .coerceAtMost(100.0)
 
         val multiplier = 1 - totalPercentFaster / 100

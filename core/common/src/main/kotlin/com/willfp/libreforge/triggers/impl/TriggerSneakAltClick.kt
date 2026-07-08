@@ -17,7 +17,7 @@ import org.bukkit.event.player.PlayerInteractEvent
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 
-object TriggerAltClick : Trigger("alt_click") {
+object TriggerSneakAltClick : Trigger("sneak_alt_click") {
     override val parameters = setOf(
         TriggerParameter.PLAYER,
         TriggerParameter.VICTIM,
@@ -74,6 +74,11 @@ object TriggerAltClick : Trigger("alt_click") {
     @EventHandler
     fun handle(event: PlayerInteractEvent) {
         val player = event.player
+
+        // 检查玩家是否正在潜行，不依赖条件系统的延迟
+        if (!player.isSneaking) {
+            return
+        }
 
         if (player.uniqueId in preventDoubleTriggers) {
             return

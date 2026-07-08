@@ -2,7 +2,6 @@ package com.willfp.libreforge.effects.impl
 
 import com.willfp.eco.core.config.interfaces.Config
 import com.willfp.eco.core.integrations.antigrief.AntigriefManager
-import com.willfp.eco.core.map.listMap
 import com.willfp.libreforge.Dispatcher
 import com.willfp.libreforge.NoCompileData
 import com.willfp.libreforge.ProvidedHolder
@@ -20,6 +19,7 @@ import org.bukkit.event.block.BlockPlaceEvent
 import org.bukkit.inventory.EquipmentSlot
 import org.bukkit.inventory.ItemStack
 import java.util.UUID
+import java.util.concurrent.ConcurrentHashMap
 
 object EffectReplantCrops : Effect<NoCompileData>("replant_crops") {
     override val arguments = arguments {
@@ -27,7 +27,7 @@ object EffectReplantCrops : Effect<NoCompileData>("replant_crops") {
         require("only_fully_grown", "You must specify if only fully grown crops should be replanted!")
     }
 
-    private val players = listMap<UUID, ReplantConfig>()
+    private val players = ConcurrentHashMap<UUID, MutableList<ReplantConfig>>()
 
     override fun onEnable(
         dispatcher: Dispatcher<*>,
@@ -36,7 +36,7 @@ object EffectReplantCrops : Effect<NoCompileData>("replant_crops") {
         holder: ProvidedHolder,
         compileData: NoCompileData
     ) {
-        players[dispatcher.uuid].add(ReplantConfig(
+        players.computeIfAbsent(dispatcher.uuid) { mutableListOf() }.add(ReplantConfig(
             identifiers.uuid,
             config.getBool("consume_seeds"),
             config.getBool("only_fully_grown")
@@ -44,7 +44,7 @@ object EffectReplantCrops : Effect<NoCompileData>("replant_crops") {
     }
 
     override fun onDisable(dispatcher: Dispatcher<*>, identifiers: Identifiers, holder: ProvidedHolder) {
-        players[dispatcher.uuid].removeIf { it.uuid == identifiers.uuid }
+        players[dispatcher.uuid]?.removeIf { it.uuid == identifiers.uuid }
     }
 
     @EventHandler(
@@ -53,7 +53,9 @@ object EffectReplantCrops : Effect<NoCompileData>("replant_crops") {
     fun handle(event: BlockBreakEvent) {
         val player = event.player
 
-        if (players[player.uniqueId].isEmpty()) {
+        val playerConfigs = players[player.uniqueId] ?: return
+
+        if (playerConfigs.isEmpty()) {
             return
         }
 
@@ -82,7 +84,6 @@ object EffectReplantCrops : Effect<NoCompileData>("replant_crops") {
             return
         }
 
-        val playerConfigs = players[player.uniqueId]
         val consumeSeeds = playerConfigs.any { it.consumeSeeds }
         val onlyFullyGrown = playerConfigs.all { it.onlyFullyGrown }
 

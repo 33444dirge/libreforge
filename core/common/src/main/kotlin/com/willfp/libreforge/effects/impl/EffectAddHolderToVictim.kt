@@ -1,7 +1,6 @@
 package com.willfp.libreforge.effects.impl
 
 import com.willfp.eco.core.config.interfaces.Config
-import com.willfp.eco.core.map.listMap
 import com.willfp.libreforge.Holder
 import com.willfp.libreforge.HolderTemplate
 import com.willfp.libreforge.SimpleProvidedHolder
@@ -22,6 +21,7 @@ import org.bukkit.event.EventHandler
 import org.bukkit.event.entity.EntityDeathEvent
 import org.bukkit.event.player.PlayerQuitEvent
 import java.util.UUID
+import java.util.concurrent.ConcurrentHashMap
 
 object EffectAddHolderToVictim : Effect<HolderTemplate>("add_holder_to_victim") {
     override val parameters = setOf(
@@ -33,10 +33,10 @@ object EffectAddHolderToVictim : Effect<HolderTemplate>("add_holder_to_victim") 
         require("duration", "You must specify the duration (in ticks)!")
     }
 
-    private val holders = listMap<UUID, Holder>()
+    private val holders = ConcurrentHashMap<UUID, MutableList<Holder>>()
 
     init {
-        registerGenericHolderProvider { holders[it.uuid].map { h -> SimpleProvidedHolder(h) } }
+        registerGenericHolderProvider { holders[it.uuid]?.map { h -> SimpleProvidedHolder(h) } ?: emptyList() }
     }
 
     override fun onTrigger(config: Config, data: TriggerData, compileData: HolderTemplate): Boolean {
@@ -45,11 +45,11 @@ object EffectAddHolderToVictim : Effect<HolderTemplate>("add_holder_to_victim") 
         val duration = config.getIntFromExpression("duration", data).coerceAtLeast(1)
         val holder = compileData.toHolder().nest(data.holder)
 
-        holders[player.uniqueId].add(holder)
+        holders.getOrPut(player.uniqueId) { mutableListOf() }.add(holder)
 
         SchedulerHelper.runTaskLater(plugin, player, {
-            holders[player.uniqueId].remove(holder)
-            if (holders[player.uniqueId].isEmpty()) {
+            holders[player.uniqueId]?.remove(holder)
+            if (holders[player.uniqueId].isNullOrEmpty()) {
                 holders.remove(player.uniqueId)
             }
         }, duration.toLong())

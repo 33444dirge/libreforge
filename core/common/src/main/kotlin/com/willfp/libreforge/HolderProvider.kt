@@ -2,7 +2,6 @@ package com.willfp.libreforge
 
 import com.github.benmanes.caffeine.cache.Cache
 import com.github.benmanes.caffeine.cache.Caffeine
-import com.willfp.eco.core.map.listMap
 import com.willfp.libreforge.effects.EffectBlock
 import com.willfp.libreforge.slot.ItemHolderFinder
 import org.bukkit.Bukkit
@@ -10,6 +9,7 @@ import org.bukkit.entity.Player
 import org.bukkit.event.Event
 import org.bukkit.event.HandlerList
 import java.util.UUID
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
 
 
@@ -187,10 +187,19 @@ fun Dispatcher<*>.refreshHolders() {
  * Forcibly refresh holders, ignoring cooldown.
  */
 fun Dispatcher<*>.forceRefreshHolders() {
-    refreshFunctions.forEach { it(this) }
-    // Pre-populate cache so updateEffects() gets a hit instead of a miss
-    holderCache.put(this.uuid, this.computeHolders())
+    this.forceCalculateHolders()
     this.updateEffects()
+}
+
+/**
+ * Forcibly recalculate holders without reloading active permanent effects.
+ */
+internal fun Dispatcher<*>.forceCalculateHolders(): Collection<ProvidedHolder> {
+    refreshFunctions.forEach { it(this) }
+    return this.computeHolders().also {
+        // Pre-populate cache so later holder lookups get a hit.
+        holderCache.put(this.uuid, it)
+    }
 }
 
 /**
@@ -334,7 +343,7 @@ internal fun clearAllHolderCaches() {
 }
 
 // Effects that were active on previous update
-private val previousStates = listMap<UUID, ProvidedEffectBlock>() // Optimisation.
+private val previousStates = ConcurrentHashMap<UUID, List<ProvidedEffectBlock>>()
 
 /**
  * Get active effects for a [dispatcher] from holders mapped to the holder
@@ -370,13 +379,13 @@ fun Dispatcher<*>.calculateActiveEffects() =
  * The active effects.
  */
 val Dispatcher<*>.activeEffects: List<EffectBlock>
-    get() = previousStates[this.uuid].map { it.effect }
+    get() = previousStates[this.uuid]?.map { it.effect } ?: emptyList()
 
 /**
  * The active effects mapped to the holder that provided them.
  */
 val Dispatcher<*>.providedActiveEffects: List<ProvidedEffectBlock>
-    get() = previousStates[this.uuid]
+    get() = previousStates[this.uuid] ?: emptyList()
 
 /**
  * Update the active effects.

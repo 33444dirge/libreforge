@@ -12,9 +12,11 @@ import com.willfp.libreforge.slot.impl.SlotTypeHelmet
 import com.willfp.libreforge.slot.impl.SlotTypeLeggings
 import com.willfp.libreforge.slot.impl.SlotTypeMainhand
 import com.willfp.libreforge.slot.impl.SlotTypeOffhand
+import java.util.concurrent.ConcurrentHashMap
 
 object SlotTypes : Registry<SlotType>() {
-    lateinit var baseTypes: List<SlotType>
+    @Volatile
+    var baseTypes: Set<SlotType> = ConcurrentHashMap.newKeySet()
         private set
 
     override fun get(id: String): SlotType? {
@@ -59,11 +61,15 @@ object SlotTypes : Registry<SlotType>() {
     }
 
     override fun onRegister(element: SlotType) {
-        baseTypes = values().filter { it !is CombinedSlotType }
+        val newSet = ConcurrentHashMap.newKeySet<SlotType>()
+        newSet.addAll(values().filter { it !is CombinedSlotType })
+        baseTypes = newSet
     }
 
     override fun onRemove(element: SlotType) {
-        baseTypes = values().filter { it !is CombinedSlotType }
+        val newSet = ConcurrentHashMap.newKeySet<SlotType>()
+        newSet.addAll(values().filter { it !is CombinedSlotType })
+        baseTypes = newSet
     }
 
     init {

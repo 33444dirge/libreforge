@@ -9,13 +9,16 @@ import org.bukkit.inventory.ItemStack
 
 object SlotTypeChestplate : SlotType("chestplate") {
     override fun addToSlot(player: Player, item: ItemStack): Boolean {
-        if (!player.inventory.chestplate.isEcoEmpty) {
-            return false
+        // Use synchronized operation to prevent race conditions in Folia
+        synchronized(player.inventory) {
+            if (!player.inventory.chestplate.isEcoEmpty) {
+                return false
+            }
+
+            player.inventory.chestplate = item
+
+            return true
         }
-
-        player.inventory.chestplate = item
-
-        return true
     }
 
     override fun getItems(entity: LivingEntity): List<ItemStack> {

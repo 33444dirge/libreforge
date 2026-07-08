@@ -1,7 +1,6 @@
 package com.willfp.libreforge.integrations.vault.impl
 
 import com.willfp.eco.core.config.interfaces.Config
-import com.willfp.eco.core.map.listMap
 import com.willfp.libreforge.Dispatcher
 import com.willfp.libreforge.NoCompileData
 import com.willfp.libreforge.ProvidedHolder
@@ -12,6 +11,7 @@ import com.willfp.libreforge.get
 import net.milkbowl.vault.permission.Permission
 import org.bukkit.entity.Player
 import java.util.UUID
+import java.util.concurrent.ConcurrentHashMap
 
 class EffectGivePermission(
     private val handler: Permission
@@ -20,7 +20,7 @@ class EffectGivePermission(
         require("permission", "You must specify the permission!")
     }
 
-    private val permissions = listMap<UUID, GivenPermission>()
+    private val permissions = ConcurrentHashMap<UUID, MutableList<GivenPermission>>()
 
     override fun onEnable(
         dispatcher: Dispatcher<*>,
@@ -38,7 +38,7 @@ class EffectGivePermission(
 
         val permission = config.getString("permission")
 
-        permissions[dispatcher.uuid].add(GivenPermission(permission, identifiers.uuid))
+        permissions.computeIfAbsent(dispatcher.uuid) { mutableListOf() }.add(GivenPermission(permission, identifiers.uuid))
         handler.playerAdd(player, permission)
     }
 
@@ -46,12 +46,12 @@ class EffectGivePermission(
         val player = dispatcher.get<Player>() ?: return
 
         val permission = permissions[dispatcher.uuid]
-            .firstOrNull { it.uuid == identifiers.uuid } ?: return
+            ?.firstOrNull { it.uuid == identifiers.uuid } ?: return
 
-        permissions[dispatcher.uuid].remove(permission)
+        permissions[dispatcher.uuid]?.remove(permission)
 
         // Remove the permission only if no other effect is giving it
-        if (permissions[dispatcher.uuid].none { it.permission == permission.permission }) {
+        if (permissions[dispatcher.uuid]?.none { it.permission == permission.permission } != false) {
             // UUID Version 2 = NPC
             if (player.uniqueId.version() == 2) {
                 return

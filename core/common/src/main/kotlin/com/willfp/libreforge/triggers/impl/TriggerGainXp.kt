@@ -9,14 +9,16 @@ import com.willfp.libreforge.triggers.TriggerData
 import com.willfp.libreforge.triggers.TriggerParameter
 import org.bukkit.event.EventHandler
 import java.util.UUID
+import java.util.concurrent.ConcurrentHashMap
 
 object TriggerGainXp : Trigger("gain_xp") {
     override val parameters = setOf(
         TriggerParameter.PLAYER,
-        TriggerParameter.EVENT
+        TriggerParameter.EVENT,
+        TriggerParameter.LOCATION
     )
 
-    private val telekinesisGranted = mutableSetOf<UUID>()
+    private val telekinesisGranted = ConcurrentHashMap.newKeySet<UUID>()
 
     @EventHandler(ignoreCancelled = true)
     fun handle(event: NaturalExpGainEvent) {

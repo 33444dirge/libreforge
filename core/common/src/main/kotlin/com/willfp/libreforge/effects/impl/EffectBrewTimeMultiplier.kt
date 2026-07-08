@@ -18,14 +18,14 @@ object EffectBrewTimeMultiplier : MultiplierEffect("brew_time_multiplier") {
 
         val multiplier = getMultiplier(player.toDispatcher())
 
-        if (player.openInventory.topInventory.holder !is BrewingStand) {
+        if (player.openInventory.topInventory.getHolder(false) !is BrewingStand) {
             return
         }
 
         // 2 seconds later to allow for the brewing stand to update, I guess.
         // This is from old EcoSkills code
         SchedulerHelper.runTaskLater(plugin, player, {
-            val stand = player.openInventory.topInventory.holder
+            val stand = player.openInventory.topInventory.getHolder(false)
 
             if (stand is BrewingStand) {
                 if (stand.brewingTime == 400) {

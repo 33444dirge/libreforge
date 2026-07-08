@@ -147,7 +147,8 @@ object SchedulerHelper {
 
     fun teleportEntity(entity: Entity, location: Location): Boolean {
         return if (isFolia) {
-            entity.teleportAsync(location).join()
+            entity.teleportAsync(location)
+            true
         } else {
             entity.teleport(location)
         }

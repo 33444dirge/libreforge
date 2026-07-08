@@ -1,7 +1,6 @@
 package com.willfp.libreforge.effects.impl
 
 import com.willfp.eco.core.config.interfaces.Config
-import com.willfp.eco.core.map.nestedMap
 import com.willfp.libreforge.Dispatcher
 import com.willfp.libreforge.NoCompileData
 import com.willfp.libreforge.ProvidedHolder
@@ -12,6 +11,7 @@ import com.willfp.libreforge.get
 import com.willfp.libreforge.points
 import org.bukkit.entity.Player
 import java.util.UUID
+import java.util.concurrent.ConcurrentHashMap
 
 object EffectAddPoints : Effect<NoCompileData>("add_points") {
     override val arguments = arguments {
@@ -19,7 +19,7 @@ object EffectAddPoints : Effect<NoCompileData>("add_points") {
         require("amount", "You must specify the amount of points!")
     }
 
-    private val tracker = nestedMap<UUID, UUID, AddedPoint>()
+    private val tracker = ConcurrentHashMap<UUID, ConcurrentHashMap<UUID, AddedPoint>>()
 
     override fun onEnable(
         dispatcher: Dispatcher<*>,
@@ -33,7 +33,7 @@ object EffectAddPoints : Effect<NoCompileData>("add_points") {
         val point = config.getString("type")
         val amount = config.getDoubleFromExpression("amount", player)
 
-        tracker[player.uniqueId][identifiers.uuid] = AddedPoint(
+        tracker.computeIfAbsent(player.uniqueId) { ConcurrentHashMap() }[identifiers.uuid] = AddedPoint(
             point,
             amount
         )
@@ -44,8 +44,8 @@ object EffectAddPoints : Effect<NoCompileData>("add_points") {
     override fun onDisable(dispatcher: Dispatcher<*>, identifiers: Identifiers, holder: ProvidedHolder) {
         val player = dispatcher.get<Player>() ?: return
 
-        val addedPoint = tracker[player.uniqueId][identifiers.uuid] ?: return
-        tracker[player.uniqueId].remove(identifiers.uuid)
+        val addedPoint = tracker[player.uniqueId]?.get(identifiers.uuid) ?: return
+        tracker[player.uniqueId]?.remove(identifiers.uuid)
 
         player.points[addedPoint.point] -= addedPoint.amount
     }

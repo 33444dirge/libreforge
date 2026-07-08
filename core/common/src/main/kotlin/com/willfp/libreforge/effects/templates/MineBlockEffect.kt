@@ -9,9 +9,12 @@ import com.willfp.libreforge.triggers.TriggerParameter
 import org.bukkit.Material
 import org.bukkit.block.Block
 import org.bukkit.entity.Player
+import java.util.UUID
+import java.util.concurrent.ConcurrentHashMap
 
 abstract class MineBlockEffect<T : Any>(id: String) : Effect<T>(id) {
     private val ignoreKey = "blockbreakevent-ignore"
+    private val breakingPlayers = ConcurrentHashMap.newKeySet<UUID>()
 
     override val parameters = setOf(
         TriggerParameter.PLAYER
@@ -23,22 +26,30 @@ abstract class MineBlockEffect<T : Any>(id: String) : Effect<T>(id) {
     }
 
     protected fun Player.breakBlocksSafely(blocks: Collection<Block>, preventTriggers: Boolean = false) {
-        if (plugin.configYml.getBool("effects.use-setblock-break")) {
-            blocks.forEach { it.type = Material.AIR }
-        } else if (preventTriggers) {
-            blocks.forEach { it.breakNaturally() }
-        } else {
-            this.runExempted {
-                for (block in blocks) {
-                    if (block.world != this.world) {
-                        continue
-                    }
+        if (!breakingPlayers.add(this.uniqueId)) {
+            return
+        }
 
-                    block.setMetadata(ignoreKey, plugin.createMetadataValue(true))
-                    this.breakBlock(block)
-                    block.removeMetadata(ignoreKey, plugin)
+        try {
+            if (plugin.configYml.getBool("effects.use-setblock-break")) {
+                blocks.forEach { it.type = Material.AIR }
+            } else if (preventTriggers) {
+                blocks.forEach { it.breakNaturally() }
+            } else {
+                this.runExempted {
+                    for (block in blocks) {
+                        if (block.world != this.world) {
+                            continue
+                        }
+
+                        block.setMetadata(ignoreKey, plugin.createMetadataValue(true))
+                        this.breakBlock(block)
+                        block.removeMetadata(ignoreKey, plugin)
+                    }
                 }
             }
+        } finally {
+            breakingPlayers.remove(this.uniqueId)
         }
     }
 }

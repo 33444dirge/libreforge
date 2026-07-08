@@ -38,7 +38,10 @@ object EffectVictimSpeedMultiplier : Effect<NoCompileData>("victim_speed_multipl
             return false
         }
 
-        attribute.baseValue = attributeValue * config.getDoubleFromExpression("multiplier", data)
+        val multiplier = config.getDoubleFromExpression("multiplier", data)
+        SchedulerHelper.runTask(plugin, victim) {
+            attribute.baseValue = attributeValue * multiplier
+        }
 
         victim.setMetadata(META_KEY, plugin.createMetadataValue(true))
 

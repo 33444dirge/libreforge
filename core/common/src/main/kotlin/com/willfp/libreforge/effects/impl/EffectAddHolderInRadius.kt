@@ -21,6 +21,7 @@ import com.willfp.libreforge.triggers.TriggerData
 import org.bukkit.Location
 import java.util.Objects
 import java.util.UUID
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
 
 object EffectAddHolderInRadius : Effect<HolderTemplate>("add_holder_in_radius") {
@@ -32,7 +33,7 @@ object EffectAddHolderInRadius : Effect<HolderTemplate>("add_holder_in_radius") 
         require("radius", "You must specify the radius!")
     }
 
-    private val holders = mutableSetOf<NearbyHolder>()
+    private val holders = ConcurrentHashMap.newKeySet<NearbyHolder>()
 
     private val nearbyCache = Caffeine.newBuilder()
         .expireAfterWrite(250L, TimeUnit.MILLISECONDS)

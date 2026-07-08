@@ -1,18 +1,18 @@
 package com.willfp.libreforge.effects.arguments.impl
 
-import com.willfp.eco.core.map.nestedMap
 import com.willfp.libreforge.ConfigurableElement
 import com.willfp.libreforge.NoCompileData
 import com.willfp.libreforge.effects.arguments.EffectArgument
 import com.willfp.libreforge.getIntFromExpression
 import com.willfp.libreforge.triggers.DispatchedTrigger
 import java.util.UUID
+import java.util.concurrent.ConcurrentHashMap
 
 object ArgumentEvery: EffectArgument<NoCompileData>("every") {
-    private val everyHandler = nestedMap<UUID, UUID, Int>()
+    private val everyHandler = ConcurrentHashMap<UUID, ConcurrentHashMap<UUID, Int>>()
 
     override fun isMet(element: ConfigurableElement, trigger: DispatchedTrigger, compileData: NoCompileData): Boolean {
-        val current = everyHandler[element.uuid][trigger.dispatcher.uuid] ?: 1
+        val current = everyHandler[element.uuid]?.get(trigger.dispatcher.uuid) ?: 1
 
         return current == 0
     }
@@ -28,7 +28,8 @@ object ArgumentEvery: EffectArgument<NoCompileData>("every") {
     private fun increment(element: ConfigurableElement, trigger: DispatchedTrigger) {
         val every = element.config.getIntFromExpression("every", trigger.data)
 
-        var current = everyHandler[element.uuid][trigger.dispatcher.uuid] ?: 1
+        val inner = everyHandler.computeIfAbsent(element.uuid) { ConcurrentHashMap() }
+        var current = inner[trigger.dispatcher.uuid] ?: 1
 
         current++
 
@@ -36,6 +37,6 @@ object ArgumentEvery: EffectArgument<NoCompileData>("every") {
             current = 0
         }
 
-        everyHandler[element.uuid][trigger.dispatcher.uuid] = current
+        inner[trigger.dispatcher.uuid] = current
     }
 }

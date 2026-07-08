@@ -4,7 +4,6 @@ import com.willfp.eco.core.config.interfaces.Config
 import com.willfp.eco.core.drops.DropQueue
 import com.willfp.eco.core.events.EntityDeathByEntityEvent
 import com.willfp.eco.core.integrations.antigrief.AntigriefManager
-import com.willfp.eco.core.map.listMap
 import com.willfp.eco.util.TelekinesisUtils
 import com.willfp.libreforge.Dispatcher
 import com.willfp.libreforge.NoCompileData
@@ -27,9 +26,10 @@ import org.bukkit.event.block.BlockDropItemEvent
 import org.bukkit.event.player.PlayerFishEvent
 import org.bukkit.event.player.PlayerShearEntityEvent
 import java.util.UUID
+import java.util.concurrent.ConcurrentHashMap
 
 object EffectTelekinesis : Effect<NoCompileData>("telekinesis") {
-    private val players = listMap<UUID, UUID>()
+    private val players = ConcurrentHashMap<UUID, MutableList<UUID>>()
     private var allowTamedMobKills: Boolean = false
 
     override fun onEnable(
@@ -39,16 +39,16 @@ object EffectTelekinesis : Effect<NoCompileData>("telekinesis") {
         holder: ProvidedHolder,
         compileData: NoCompileData
     ) {
-        players[dispatcher.uuid].add(identifiers.uuid)
+        players.computeIfAbsent(dispatcher.uuid) { mutableListOf() }.add(identifiers.uuid)
         allowTamedMobKills = config.getBoolOrNull("on_tamed_mob_kills") ?: false
     }
 
     override fun onDisable(dispatcher: Dispatcher<*>, identifiers: Identifiers, holder: ProvidedHolder) {
-        players[dispatcher.uuid].remove(identifiers.uuid)
+        players[dispatcher.uuid]?.remove(identifiers.uuid)
     }
 
     override fun postRegister() {
-        TelekinesisUtils.registerTest { players[it.uniqueId].isNotEmpty() }
+        TelekinesisUtils.registerTest { players[it.uniqueId]?.isNotEmpty() ?: false }
     }
 
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)

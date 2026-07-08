@@ -1,5 +1,6 @@
 package com.willfp.libreforge.triggers.impl
 
+import com.willfp.libreforge.forceCalculateHolders
 import com.willfp.libreforge.toDispatcher
 import com.willfp.libreforge.triggers.Trigger
 import com.willfp.libreforge.triggers.TriggerData
@@ -19,16 +20,19 @@ object TriggerDamageItem : Trigger("damage_item") {
     @EventHandler(ignoreCancelled = true)
     fun handle(event: PlayerItemDamageEvent) {
         val player = event.player
+        val dispatcher = player.toDispatcher()
+        val holders = dispatcher.forceCalculateHolders()
 
         this.dispatch(
-            player.toDispatcher(),
+            dispatcher,
             TriggerData(
                 player = player,
                 location = player.location,
                 item = event.item,
                 value = event.damage.toDouble(),
                 event = event
-            )
+            ),
+            forceHolders = holders
         )
     }
 }

@@ -63,7 +63,10 @@ object EffectSpawnMobs : Effect<TestableEntity>("spawn_mobs") {
             )
             val mob = entityType.spawn(locationToSpawn) as Mob
             val healthAttr = mob.getAttribute(Attribute.MAX_HEALTH) ?: continue
-            healthAttr.baseValue = health
+            SchedulerHelper.runTask(plugin, mob) {
+                healthAttr.baseValue = health
+                mob.health = health
+            }
 
             if (victim != null) {
                 mob.target = victim
@@ -73,8 +76,6 @@ object EffectSpawnMobs : Effect<TestableEntity>("spawn_mobs") {
             if (player != null) {
                 mob.setMetadata("spawn-mobs-avoid", plugin.createMetadataValue(player.uniqueId))
             }
-
-            mob.health = health
 
             SchedulerHelper.runTaskLater(plugin, mob, { mob.remove() }, ticksToLive.toLong())
         }

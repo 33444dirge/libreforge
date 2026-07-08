@@ -19,6 +19,7 @@ import com.willfp.libreforge.registerGenericHolderProvider
 import org.bukkit.Bukkit
 import java.util.Objects
 import java.util.UUID
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
 
 object EffectAddPermanentHolderInRadius : Effect<HolderTemplate>("add_permanent_holder_in_radius") {
@@ -27,7 +28,7 @@ object EffectAddPermanentHolderInRadius : Effect<HolderTemplate>("add_permanent_
         require("radius", "You must specify the radius!")
     }
 
-    private val holders = mutableSetOf<PermanentNearbyHolder>()
+    private val holders = ConcurrentHashMap.newKeySet<PermanentNearbyHolder>()
 
     private val nearbyCache = Caffeine.newBuilder()
         .expireAfterWrite(250L, TimeUnit.MILLISECONDS)

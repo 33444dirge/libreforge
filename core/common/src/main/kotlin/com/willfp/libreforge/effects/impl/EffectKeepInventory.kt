@@ -1,7 +1,6 @@
 package com.willfp.libreforge.effects.impl
 
 import com.willfp.eco.core.config.interfaces.Config
-import com.willfp.eco.core.map.listMap
 import com.willfp.libreforge.Dispatcher
 import com.willfp.libreforge.NoCompileData
 import com.willfp.libreforge.ProvidedHolder
@@ -10,9 +9,10 @@ import com.willfp.libreforge.effects.Identifiers
 import org.bukkit.event.EventHandler
 import org.bukkit.event.entity.PlayerDeathEvent
 import java.util.UUID
+import java.util.concurrent.ConcurrentHashMap
 
 object EffectKeepInventory : Effect<NoCompileData>("keep_inventory") {
-    private val players = listMap<UUID, UUID>()
+    private val players = ConcurrentHashMap<UUID, MutableList<UUID>>()
 
     override fun onEnable(
         dispatcher: Dispatcher<*>,
@@ -21,18 +21,18 @@ object EffectKeepInventory : Effect<NoCompileData>("keep_inventory") {
         holder: ProvidedHolder,
         compileData: NoCompileData
     ) {
-        players[dispatcher.uuid].add(identifiers.uuid)
+        players.computeIfAbsent(dispatcher.uuid) { mutableListOf() }.add(identifiers.uuid)
     }
 
     override fun onDisable(dispatcher: Dispatcher<*>, identifiers: Identifiers, holder: ProvidedHolder) {
-        players[dispatcher.uuid].remove(identifiers.uuid)
+        players[dispatcher.uuid]?.remove(identifiers.uuid)
     }
 
     @EventHandler(ignoreCancelled = true)
     fun handle(event: PlayerDeathEvent) {
         val player = event.player
 
-        if (players[player.uniqueId].isNotEmpty()) {
+        if (players[player.uniqueId]?.isNotEmpty() == true) {
             event.keepInventory = true
             event.drops.clear()
         }

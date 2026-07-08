@@ -1,7 +1,6 @@
 package com.willfp.libreforge.effects.impl
 
 import com.willfp.eco.core.config.interfaces.Config
-import com.willfp.eco.core.map.listMap
 import com.willfp.libreforge.Holder
 import com.willfp.libreforge.HolderTemplate
 import com.willfp.libreforge.SimpleProvidedHolder
@@ -21,6 +20,7 @@ import org.bukkit.event.EventHandler
 import org.bukkit.event.entity.EntityDeathEvent
 import org.bukkit.event.player.PlayerQuitEvent
 import java.util.UUID
+import java.util.concurrent.ConcurrentHashMap
 
 object EffectAddHolder : Effect<HolderTemplate>("add_holder") {
     override val isPermanent = false
@@ -30,11 +30,11 @@ object EffectAddHolder : Effect<HolderTemplate>("add_holder") {
         require("duration", "You must specify the duration (in ticks)!")
     }
 
-    private val holders = listMap<UUID, Holder>()
+    private val holders = ConcurrentHashMap<UUID, MutableList<Holder>>()
 
     init {
         registerGenericHolderProvider {
-            holders[it.uuid].map { h -> SimpleProvidedHolder(h) }
+            holders[it.uuid]?.map { h -> SimpleProvidedHolder(h) } ?: emptyList()
         }
     }
 
@@ -43,21 +43,20 @@ object EffectAddHolder : Effect<HolderTemplate>("add_holder") {
         val duration = config.getIntFromExpression("duration", data).coerceAtLeast(1)
         val holder = compileData.toHolder().nest(data.holder)
 
-        holders[dispatcher.uuid].add(holder)
+        holders.getOrPut(dispatcher.uuid) { mutableListOf() }.add(holder)
 
         val location = dispatcher.location
         if (location != null) {
             SchedulerHelper.runTaskLater(plugin, location, {
-                holders[dispatcher.uuid].remove(holder)
-                if (holders[dispatcher.uuid].isEmpty()) {
+                holders[dispatcher.uuid]?.remove(holder)
+                if (holders[dispatcher.uuid].isNullOrEmpty()) {
                     holders.remove(dispatcher.uuid)
                 }
             }, duration.toLong())
         } else {
-            // 如果没有位置，使用全局调度器（但这在 Folia 上可能不安全）
             plugin.scheduler.runLater(duration.toLong()) {
-                holders[dispatcher.uuid].remove(holder)
-                if (holders[dispatcher.uuid].isEmpty()) {
+                holders[dispatcher.uuid]?.remove(holder)
+                if (holders[dispatcher.uuid].isNullOrEmpty()) {
                     holders.remove(dispatcher.uuid)
                 }
             }

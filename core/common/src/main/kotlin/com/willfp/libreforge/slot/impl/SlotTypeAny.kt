@@ -10,7 +10,7 @@ import org.bukkit.inventory.ItemStack
 
 object SlotTypeAny : CombinedSlotType("any") {
     override val types: List<SlotType>
-        get() = SlotTypes.baseTypes
+        get() = SlotTypes.baseTypes.toList()
 
     override fun addToSlot(player: Player, item: ItemStack): Boolean {
         DropQueue(player)

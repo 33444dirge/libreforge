@@ -176,11 +176,16 @@ abstract class ElementLike : ConfigurableElement {
                 }
             }
 
-            val location = data.location ?: data.player?.location ?: data.victim?.location
-            if (location != null) {
-                task.runTask(location, delay, delay)
+            val targetEntity = data.player ?: data.victim
+            if (targetEntity != null) {
+                task.runTask(targetEntity, delay, delay)
             } else {
-                task.runTask(delay, delay)
+                val location = data.location
+                if (location != null) {
+                    task.runTask(location, delay, delay)
+                } else {
+                    task.runTask(delay, delay)
+                }
             }
         }
 

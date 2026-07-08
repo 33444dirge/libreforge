@@ -22,7 +22,9 @@ object EffectDataFixer : Listener {
         }
 
         // Extra fix for pre-4.2.3
-        player.fixAttributes()
+        SchedulerHelper.runTask(plugin, player) {
+            player.fixAttributes()
+        }
 
         dispatcher.updateHolders()
         dispatcher.purgePreviousHolders()
@@ -34,7 +36,9 @@ object EffectDataFixer : Listener {
         val dispatcher = player.toDispatcher()
 
         // Extra fix for pre-4.2.3
-        player.fixAttributes()
+        SchedulerHelper.runTask(plugin, player) {
+            player.fixAttributes()
+        }
 
         dispatcher.updateHolders()
 
@@ -44,21 +48,25 @@ object EffectDataFixer : Listener {
     }
 
     private fun Player.fixAttributes() {
-        val effectIds = Effects.values().map { it.id }.toSet()
+        try {
+            val effectIds = Effects.values().map { it.id }.toSet()
 
-        for (attribute in Registry.ATTRIBUTE) {
-            val inst = this.getAttribute(attribute) ?: continue
-            for (mod in inst.modifiers) {
-                if (mod.name.startsWith("libreforge") || effectIds.any { mod.name.startsWith(it) }) {
-                    inst.removeModifier(mod)
+            for (attribute in Registry.ATTRIBUTE) {
+                val inst = this.getAttribute(attribute) ?: continue
+                for (mod in inst.modifiers) {
+                    if (mod.name.startsWith("libreforge") || effectIds.any { mod.name.startsWith(it) }) {
+                        inst.removeModifier(mod)
+                    }
                 }
             }
-        }
 
-        // Extra fix
-        val maxHealth = this.getAttribute(Attribute.MAX_HEALTH)?.value ?: 0.0
-        if (this.health > maxHealth) {
-            this.health = maxHealth
+            // Extra fix
+            val maxHealth = this.getAttribute(Attribute.MAX_HEALTH)?.value ?: 0.0
+            if (this.health > maxHealth) {
+                this.health = maxHealth
+            }
+        } catch (_: Exception) {
+            // Folia: player attributes may be in a partially destroyed state during quit
         }
     }
 }

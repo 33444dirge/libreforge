@@ -4,6 +4,7 @@ import com.willfp.eco.core.config.interfaces.Config
 import com.willfp.libreforge.Dispatcher
 import com.willfp.libreforge.NoCompileData
 import com.willfp.libreforge.ProvidedHolder
+import com.willfp.libreforge.SchedulerHelper
 import com.willfp.libreforge.effects.Effect
 import com.willfp.libreforge.effects.Identifiers
 import com.willfp.libreforge.get
@@ -48,21 +49,22 @@ abstract class AttributeEffect(
             return
         }
 
-        val instance = entity.getAttribute(attribute) ?: return
-        val modifierName = "libreforge:${this.id} - ${identifiers.key.key} (${holder.holder.id})"
+        SchedulerHelper.runTask(plugin, entity, Runnable {
+            val instance = entity.getAttribute(attribute) ?: return@Runnable
+            val modifierName = "libreforge:${this.id} - ${identifiers.key.key} (${holder.holder.id})"
 
-        instance.clean(modifierName, identifiers)
+            instance.clean(modifierName, identifiers)
 
-        val modifier = attributeModifier(
-            identifiers,
-            modifierName,
-            getValue(config, entity),
-            operation
-        )
+            val modifier = attributeModifier(
+                identifiers,
+                modifierName,
+                getValue(config, entity),
+                operation
+            )
 
-        // Extra check to prevent adding the same modifier twice.
-        instance.removeModifier(modifier)
-        instance.addModifier(modifier)
+            instance.removeModifier(modifier)
+            instance.addModifier(modifier)
+        })
     }
 
     override fun onDisable(dispatcher: Dispatcher<*>, identifiers: Identifiers, holder: ProvidedHolder) {
@@ -72,24 +74,29 @@ abstract class AttributeEffect(
             return
         }
 
-        val instance = entity.getAttribute(attribute) ?: return
         val modifierName = "libreforge:${this.id} - ${identifiers.key.key} (${holder.holder.id})"
 
-        instance.clean(modifierName, identifiers)
+        SchedulerHelper.runTask(plugin, entity, Runnable {
+            val instance = entity.getAttribute(attribute) ?: return@Runnable
 
-        instance.removeModifier(
-            attributeModifier(
-                identifiers,
-                modifierName,
-                0.0,
-                operation
+            instance.clean(modifierName, identifiers)
+
+            instance.removeModifier(
+                attributeModifier(
+                    identifiers,
+                    modifierName,
+                    0.0,
+                    operation
+                )
             )
-        )
+        })
 
         // Run on next tick to prevent constraining to the lower value during reloads.
-        plugin.scheduler.run {
-            constrainAttribute(entity, instance.value)
-        }
+        SchedulerHelper.runTaskLater(plugin, entity, Runnable {
+            if (!entity.isValid) return@Runnable
+            val currentInstance = entity.getAttribute(attribute) ?: return@Runnable
+            constrainAttribute(entity, currentInstance.value)
+        }, 1)
     }
 
     private fun attributeModifier(

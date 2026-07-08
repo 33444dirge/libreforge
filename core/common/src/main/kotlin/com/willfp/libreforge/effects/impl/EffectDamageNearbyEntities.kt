@@ -14,9 +14,10 @@ import com.willfp.libreforge.triggers.TriggerData
 import com.willfp.libreforge.triggers.TriggerParameter
 import org.bukkit.entity.LivingEntity
 import java.util.UUID
+import java.util.concurrent.ConcurrentHashMap
 
 object EffectDamageNearbyEntities : Effect<Collection<TestableEntity>>("damage_nearby_entities") {
-    private val damagedEntities = mutableSetOf<UUID>()
+    private val damagedEntities = ConcurrentHashMap.newKeySet<UUID>()
 
     override val parameters = setOf(
         TriggerParameter.LOCATION, TriggerParameter.PLAYER

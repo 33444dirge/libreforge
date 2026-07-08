@@ -1,7 +1,6 @@
 package com.willfp.libreforge.effects.templates
 
 import com.willfp.eco.core.config.interfaces.Config
-import com.willfp.eco.core.map.listMap
 import com.willfp.eco.util.randDouble
 import com.willfp.libreforge.Dispatcher
 import com.willfp.libreforge.NoCompileData
@@ -14,13 +13,14 @@ import com.willfp.libreforge.get
 import com.willfp.libreforge.toDispatcher
 import org.bukkit.entity.Player
 import java.util.UUID
+import java.util.concurrent.ConcurrentHashMap
 
 abstract class ChanceMultiplierEffect(id: String) : Effect<NoCompileData>(id) {
     override val arguments = arguments {
         require("chance", "You must specify the chance!")
     }
 
-    private val modifiers = listMap<UUID, IdentifiedModifier>()
+    private val modifiers = ConcurrentHashMap<UUID, List<IdentifiedModifier>>()
 
     override fun onEnable(
         dispatcher: Dispatcher<*>,
@@ -29,19 +29,25 @@ abstract class ChanceMultiplierEffect(id: String) : Effect<NoCompileData>(id) {
         holder: ProvidedHolder,
         compileData: NoCompileData
     ) {
-        modifiers[dispatcher.uuid].add(IdentifiedModifier(identifiers.uuid) {
+        val modifier = IdentifiedModifier(identifiers.uuid) {
             config.getDoubleFromExpression("chance", dispatcher.get<Player>()!!)
-        })
+        }
+        modifiers.compute(dispatcher.uuid) { _, existing ->
+            (existing ?: emptyList()) + modifier
+        }
     }
 
     override fun onDisable(dispatcher: Dispatcher<*>, identifiers: Identifiers, holder: ProvidedHolder) {
-        modifiers[dispatcher.uuid].removeIf { it.uuid == identifiers.uuid }
+        modifiers.computeIfPresent(dispatcher.uuid) { _, existing ->
+            existing.filter { it.uuid != identifiers.uuid }
+                .ifEmpty { null }
+        }
     }
 
     protected fun passesChance(dispatcher: Dispatcher<*>): Boolean {
         var chance = 1.0
 
-        for (modifier in modifiers[dispatcher.uuid]) {
+        for (modifier in modifiers[dispatcher.uuid] ?: emptyList()) {
             chance *= (100 - modifier.modifier) / 100
         }
 

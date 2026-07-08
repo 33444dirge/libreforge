@@ -17,7 +17,9 @@ object EntityRefreshListener : Listener {
         event.chunk.entities.filterIsInstance<LivingEntity>()
             .filterNot { it is Player }
             .forEach { entity ->
-                removeEcoAttributeModifiers(entity)
+                SchedulerHelper.runTask(plugin, entity) {
+                    removeEcoAttributeModifiers(entity)
+                }
             }
     }
 

@@ -10,6 +10,7 @@ import com.willfp.libreforge.effects.Identifiers
 import com.willfp.libreforge.get
 import com.willfp.libreforge.globalPoints
 import java.util.UUID
+import java.util.concurrent.ConcurrentHashMap
 
 object EffectAddGlobalPoints : Effect<NoCompileData>("add_global_points") {
     override val arguments = arguments {
@@ -17,7 +18,7 @@ object EffectAddGlobalPoints : Effect<NoCompileData>("add_global_points") {
         require("amount", "You must specify the amount of points!")
     }
 
-    private val tracker = mutableMapOf<UUID, AddedPoint>()
+    private val tracker = ConcurrentHashMap<UUID, AddedPoint>()
 
     override fun onEnable(
         dispatcher: Dispatcher<*>,

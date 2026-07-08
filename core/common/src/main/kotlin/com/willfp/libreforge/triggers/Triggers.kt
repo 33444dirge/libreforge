@@ -59,10 +59,13 @@ import com.willfp.libreforge.triggers.impl.TriggerHeal
 import com.willfp.libreforge.triggers.impl.TriggerHoldItem
 import com.willfp.libreforge.triggers.impl.TriggerHookInGround
 import com.willfp.libreforge.triggers.impl.TriggerItemBreak
+import com.willfp.libreforge.triggers.impl.TriggerItemLeftClick
+import com.willfp.libreforge.triggers.impl.TriggerItemSneakLeftClick
 import com.willfp.libreforge.triggers.impl.TriggerJoin
 import com.willfp.libreforge.triggers.impl.TriggerJump
 import com.willfp.libreforge.triggers.impl.TriggerKill
 import com.willfp.libreforge.triggers.impl.TriggerLeashEntity
+import com.willfp.libreforge.triggers.impl.TriggerLeftClick
 import com.willfp.libreforge.triggers.impl.TriggerLeave
 import com.willfp.libreforge.triggers.impl.TriggerLeaveBed
 import com.willfp.libreforge.triggers.impl.TriggerLevelUpItem
@@ -89,6 +92,8 @@ import com.willfp.libreforge.triggers.impl.TriggerSendMessage
 import com.willfp.libreforge.triggers.impl.TriggerShear
 import com.willfp.libreforge.triggers.impl.TriggerShearEntity
 import com.willfp.libreforge.triggers.impl.TriggerShieldBlock
+import com.willfp.libreforge.triggers.impl.TriggerSneakAltClick
+import com.willfp.libreforge.triggers.impl.TriggerSneakLeftClick
 import com.willfp.libreforge.triggers.impl.TriggerShootBow
 import com.willfp.libreforge.triggers.impl.TriggerSmelt
 import com.willfp.libreforge.triggers.impl.TriggerSmithItem
@@ -205,10 +210,13 @@ object Triggers : Registry<Trigger>() {
         register(TriggerHoldItem)
         register(TriggerHookInGround)
         register(TriggerItemBreak)
+        register(TriggerItemLeftClick)
+        register(TriggerItemSneakLeftClick)
         register(TriggerJoin)
         register(TriggerJump)
         register(TriggerKill)
         register(TriggerLeashEntity)
+        register(TriggerLeftClick)
         register(TriggerLeave)
         register(TriggerLeaveBed)
         register(TriggerLevelUpItem)
@@ -237,8 +245,10 @@ object Triggers : Registry<Trigger>() {
         register(TriggerShearEntity)
         register(TriggerShieldBlock)
         register(TriggerShootBow)
-        register(TriggerSmithItem)
         register(TriggerSmelt)
+        register(TriggerSneakAltClick)
+        register(TriggerSneakLeftClick)
+        register(TriggerSmithItem)
         register(TriggerSwapHands)
         register(TriggerTameAnimal)
         register(TriggerTeleport)

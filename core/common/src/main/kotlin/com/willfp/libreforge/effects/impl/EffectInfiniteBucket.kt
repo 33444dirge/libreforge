@@ -10,6 +10,7 @@ import com.willfp.libreforge.effects.Identifiers
 import com.willfp.libreforge.get
 import com.willfp.libreforge.getStrings
 import com.willfp.libreforge.plugin
+import com.willfp.libreforge.SchedulerHelper
 import org.bukkit.Material
 import org.bukkit.entity.Player
 import org.bukkit.event.EventHandler
@@ -17,6 +18,7 @@ import org.bukkit.event.player.PlayerBucketEmptyEvent
 import org.bukkit.event.player.PlayerItemConsumeEvent
 import org.bukkit.inventory.ItemStack
 import java.util.UUID
+import java.util.concurrent.ConcurrentHashMap
 
 object EffectInfiniteBucket : Effect<Set<String>>("infinite_bucket") {
 
@@ -24,7 +26,7 @@ object EffectInfiniteBucket : Effect<Set<String>>("infinite_bucket") {
         require(listOf("type", "types"), "You must specify the bucket type(s) (e.g. type: any, or types: [lava, water, axolotl, etc.])!")
     }
 
-    private val activePlayers = mutableMapOf<UUID, Set<String>>()
+    private val activePlayers = ConcurrentHashMap<UUID, Set<String>>()
 
     @EventHandler
     fun onBucketEmpty(event: PlayerBucketEmptyEvent) {
@@ -34,12 +36,12 @@ object EffectInfiniteBucket : Effect<Set<String>>("infinite_bucket") {
 
         val slot = player.inventory.heldItemSlot
 
-        plugin.scheduler.runAsync {
+        SchedulerHelper.runTask(plugin, player, Runnable {
             val item = player.inventory.getItem(slot)
             if (item != null && item.type == Material.BUCKET) {
                 player.inventory.setItem(slot, ItemStack(event.bucket))
             }
-        }
+        })
     }
 
     @EventHandler
@@ -51,12 +53,12 @@ object EffectInfiniteBucket : Effect<Set<String>>("infinite_bucket") {
 
         val slot = player.inventory.heldItemSlot
 
-        plugin.scheduler.runAsync {
+        SchedulerHelper.runTask(plugin, player, Runnable {
             val item = player.inventory.getItem(slot)
             if (item != null && item.type == Material.BUCKET) {
                 player.inventory.setItem(slot, ItemStack(Material.MILK_BUCKET))
             }
-        }
+        })
     }
 
     override fun makeCompileData(config: Config, context: ViolationContext): Set<String> {
