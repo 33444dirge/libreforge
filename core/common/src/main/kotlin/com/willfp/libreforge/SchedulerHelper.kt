@@ -8,15 +8,12 @@ import org.bukkit.scheduler.BukkitTask
 import java.util.concurrent.TimeUnit
 
 object SchedulerHelper {
-    private val isFolia: Boolean
-        get() {
-            return try {
-                Class.forName("io.papermc.paper.threadedregions.RegionizedServer")
-                true
-            } catch (_: ClassNotFoundException) {
-                false
-            }
-        }
+    private val isFolia = try {
+        Class.forName("io.papermc.paper.threadedregions.RegionizedServer", false, Bukkit::class.java.classLoader)
+        true
+    } catch (_: ClassNotFoundException) {
+        false
+    }
 
     fun runTask(plugin: Plugin, task: Runnable): Any {
         return if (isFolia) {
