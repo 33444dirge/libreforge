@@ -9,8 +9,11 @@ import com.willfp.libreforge.effects.Effects
 import com.willfp.libreforge.effects.impl.aoe.AOECompileData
 import com.willfp.libreforge.effects.impl.aoe.AOEShapes
 import com.willfp.libreforge.get
+import com.willfp.libreforge.plugin
+import com.willfp.libreforge.SchedulerHelper
 import com.willfp.libreforge.toFloat3
 import com.willfp.libreforge.triggers.TriggerData
+import org.bukkit.Bukkit
 import org.bukkit.entity.LivingEntity
 
 object EffectAOE : Effect<AOECompileData>("aoe") {
@@ -43,14 +46,23 @@ object EffectAOE : Effect<AOECompileData>("aoe") {
         val location = data.location?.clone()
             ?: data.dispatcher.location?.clone()
             ?: return false
+        val dispatcherLocation = data.dispatcher.location?.clone()
+        val dispatcherEyeHeight = data.dispatcher.get<LivingEntity>()?.eyeHeight ?: 0.0
 
-        val dispatcherLocation = data.dispatcher.location
+        // The source entity may be in another world/Region. Nearby-entity queries must run on the
+        // Region owning the query location, never on the source entity's scheduler thread.
+        if (SchedulerHelper.isFolia && !Bukkit.isOwnedByCurrentRegion(location)) {
+            SchedulerHelper.runTask(plugin, location) {
+                onTrigger(config, data.copy(location = location), compileData)
+            }
+            return true
+        }
 
         if (dispatcherLocation != null) {
             if (location.world == dispatcherLocation.world
                 && location.distanceSquared(dispatcherLocation) <= 1.0
             ) {
-                location.add(0.0, data.dispatcher.get<LivingEntity>()?.eyeHeight ?: 0.0, 0.0)
+                location.add(0.0, dispatcherEyeHeight, 0.0)
                 location.direction = dispatcherLocation.direction
             }
         }

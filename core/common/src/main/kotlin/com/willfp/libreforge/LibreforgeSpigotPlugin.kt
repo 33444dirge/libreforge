@@ -25,6 +25,8 @@ import com.willfp.libreforge.effects.Effects
 import com.willfp.libreforge.effects.arguments.custom.CustomEffectArguments
 import com.willfp.libreforge.effects.impl.bossbar.BossBarProgressPlaceholder
 import com.willfp.libreforge.filters.Filters
+import com.willfp.libreforge.filters.impl.AttackCooldownSnapshot
+import com.willfp.libreforge.filters.impl.clearAttackCooldownSnapshots
 import com.willfp.libreforge.integrations.auraskills.AuraSkillsIntegration
 import com.willfp.libreforge.integrations.axplugins.axenvoy.AxEnvoyIntegration
 import com.willfp.libreforge.integrations.axplugins.axtrade.AxTradeIntegration
@@ -112,6 +114,8 @@ class LibreforgeSpigotPlugin : EcoPlugin() {
     }
 
     override fun handleEnable() {
+        onDisable { clearAttackCooldownSnapshots() }
+
         if (this.configYml.getBool("show-libreforge-info")) {
             this.logger.info("")
             this.logger.info("Hey, what's this plugin doing here? I didn't install it!")
@@ -228,7 +232,8 @@ class LibreforgeSpigotPlugin : EcoPlugin() {
         val listeners = mutableListOf(
             EffectDataFixer,
             ItemRefreshListener,
-            EntityRefreshListener
+            EntityRefreshListener,
+            AttackCooldownSnapshot
         )
 
         if (Prerequisite.HAS_PAPER.isMet) {

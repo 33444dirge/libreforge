@@ -1,7 +1,6 @@
 package com.willfp.libreforge.slot
 
-import com.github.benmanes.caffeine.cache.Cache
-import com.github.benmanes.caffeine.cache.Caffeine
+import ca.spottedleaf.concurrentutil.map.concurrent.objects.ConcurrentChainedObject2ObjectHashTable
 import com.willfp.libreforge.Dispatcher
 import com.willfp.libreforge.Holder
 import com.willfp.libreforge.HolderProvider
@@ -15,7 +14,14 @@ import org.bukkit.entity.LivingEntity
 import org.bukkit.entity.Player
 import org.bukkit.inventory.ItemStack
 import java.util.UUID
-import java.util.concurrent.TimeUnit
+
+private const val ITEM_HOLDER_CACHE_CAPACITY = 128
+private const val ITEM_HOLDER_CACHE_TTL_NANOS = 500_000_000L
+
+private data class ItemHolderCacheEntry<T : Holder>(
+    val expiresAt: Long,
+    val holders: List<TypedProvidedHolder<T>>,
+)
 
 /**
  * Finds holders on items for entities, allows for easy implementation of [HolderProvider].
@@ -59,30 +65,39 @@ abstract class ItemHolderFinder<T : Holder> {
     }
 
     private inner class ItemHolderFinderProvider : TypedHolderProvider<T> {
-        private val cache: Cache<UUID, List<TypedProvidedHolder<T>>> = Caffeine.newBuilder()
-            .expireAfterWrite(500, TimeUnit.MILLISECONDS)
-            .build()
+        private val cache = ConcurrentChainedObject2ObjectHashTable
+            .createWithExpected<UUID, ItemHolderCacheEntry<T>>(ITEM_HOLDER_CACHE_CAPACITY)
 
         init {
             registerRefreshFunction {
-                cache.invalidate(it.uuid)
+                cache.remove(it.uuid)
             }
         }
 
         override fun provide(dispatcher: Dispatcher<*>): Collection<TypedProvidedHolder<T>> {
-            return cache.get(dispatcher.uuid) {
-                val entity = dispatcher.get<LivingEntity>() ?: return@get emptyList()
+            val now = System.nanoTime()
+            cache.get(dispatcher.uuid)?.takeIf { it.expiresAt > now }?.let { return it.holders }
 
-                val slots = SlotTypes.baseTypes.toMutableSet()
+            val entity = dispatcher.get<LivingEntity>() ?: return emptyList()
 
-                // Prevents double scanning of held item slot
-                dispatcher.ifType<Player> {
-                    slots.remove(NumericSlotType(it.inventory.heldItemSlot))
-                }
+            val slots = SlotTypes.baseTypes.toMutableSet()
 
-                // Only check for non-combined slot types
-                slots.flatMap { slot -> findHolders(entity, slot) }
+            // Prevents double scanning of held item slot
+            dispatcher.ifType<Player> {
+                slots.remove(NumericSlotType(it.inventory.heldItemSlot))
             }
+
+            // Only check for non-combined slot types
+            val holders = slots.flatMap { slot -> findHolders(entity, slot) }
+
+            // The map is intentionally bounded: all entries naturally expire after 500ms, but a burst of unique
+            // dispatchers must never retain an unbounded number of item-holder lists between cleanups.
+            if (cache.size() >= ITEM_HOLDER_CACHE_CAPACITY) {
+                cache.clear()
+            }
+            cache.put(dispatcher.uuid, ItemHolderCacheEntry(now + ITEM_HOLDER_CACHE_TTL_NANOS, holders))
+
+            return holders
         }
     }
 }

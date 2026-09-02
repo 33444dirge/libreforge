@@ -7,21 +7,19 @@ import com.willfp.libreforge.ArgType
 import com.willfp.libreforge.Dispatcher
 import com.willfp.libreforge.NoCompileData
 import com.willfp.libreforge.ProvidedHolder
+import com.willfp.libreforge.SchedulerHelper
 import com.willfp.libreforge.arguments
 import com.willfp.libreforge.effects.Effect
 import com.willfp.libreforge.effects.Identifiers
 import com.willfp.libreforge.plugin
-import org.bukkit.Bukkit
 import org.bukkit.Material
-import org.bukkit.block.BlockFace
 import org.bukkit.block.data.Ageable
 import org.bukkit.event.EventHandler
 import org.bukkit.event.block.BlockBreakEvent
-import org.bukkit.event.block.BlockPlaceEvent
-import org.bukkit.inventory.EquipmentSlot
 import org.bukkit.inventory.ItemStack
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.CopyOnWriteArrayList
 
 object EffectReplantCrops : Effect<NoCompileData>("replant_crops") {
     override val description = "Automatically replants harvested crops at age 0 when the player breaks them."
@@ -42,7 +40,7 @@ object EffectReplantCrops : Effect<NoCompileData>("replant_crops") {
         )
     }
 
-    private val players = ConcurrentHashMap<UUID, MutableList<ReplantConfig>>()
+    private val players = ConcurrentHashMap<UUID, CopyOnWriteArrayList<ReplantConfig>>()
 
     override fun onEnable(
         dispatcher: Dispatcher<*>,
@@ -51,7 +49,7 @@ object EffectReplantCrops : Effect<NoCompileData>("replant_crops") {
         holder: ProvidedHolder,
         compileData: NoCompileData
     ) {
-        players.computeIfAbsent(dispatcher.uuid) { mutableListOf() }.add(ReplantConfig(
+        players.computeIfAbsent(dispatcher.uuid) { CopyOnWriteArrayList() }.add(ReplantConfig(
             identifiers.uuid,
             config.getBool("consume_seeds"),
             config.getBool("only_fully_grown")
@@ -59,7 +57,10 @@ object EffectReplantCrops : Effect<NoCompileData>("replant_crops") {
     }
 
     override fun onDisable(dispatcher: Dispatcher<*>, identifiers: Identifiers, holder: ProvidedHolder) {
-        players[dispatcher.uuid]?.removeIf { it.uuid == identifiers.uuid }
+        players.computeIfPresent(dispatcher.uuid) { _, configs ->
+            configs.removeIf { it.uuid == identifiers.uuid }
+            configs.takeIf { it.isNotEmpty() }
+        }
     }
 
     @EventHandler(
@@ -136,23 +137,15 @@ object EffectReplantCrops : Effect<NoCompileData>("replant_crops") {
 
         data.age = 0
 
-        plugin.scheduler.run {
-            block.type = type
-            block.blockData = data
-
-            // Improves compatibility with other plugins.
-            Bukkit.getPluginManager().callEvent(
-                BlockPlaceEvent(
-                    block,
-                    block.state,
-                    block.getRelative(BlockFace.DOWN),
-                    player.inventory.itemInMainHand,
-                    player,
-                    true,
-                    EquipmentSlot.HAND
-                )
-            )
-        }
+        // The break event completes before the crop can be restored. Carry only snapshots
+        // into the delayed task, then resolve the live block on its owning region.
+        val location = block.location
+        val replantedData = data.clone() as Ageable
+        SchedulerHelper.runTaskLater(plugin, location, Runnable {
+            val target = location.block
+            target.type = type
+            target.blockData = replantedData
+        }, 1L)
     }
 
     private data class ReplantConfig(

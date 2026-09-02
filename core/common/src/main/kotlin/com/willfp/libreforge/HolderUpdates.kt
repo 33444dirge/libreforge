@@ -8,7 +8,10 @@ import org.bukkit.event.EventHandler
 import org.bukkit.event.EventPriority
 import org.bukkit.event.Listener
 import org.bukkit.event.entity.EntityPickupItemEvent
+import org.bukkit.event.inventory.InventoryAction
 import org.bukkit.event.inventory.InventoryClickEvent
+import org.bukkit.event.inventory.InventoryCreativeEvent
+import org.bukkit.event.inventory.InventoryDragEvent
 import org.bukkit.event.player.PlayerDropItemEvent
 import org.bukkit.event.player.PlayerItemHeldEvent
 import org.bukkit.event.player.PlayerJoinEvent
@@ -103,16 +106,55 @@ object ItemRefreshListener : Listener {
     @EventHandler(priority = EventPriority.LOWEST)
     fun onInventoryClick(event: InventoryClickEvent) {
         val player = event.whoClicked as? Player ?: return
+        val placesCursorItem = event.action == InventoryAction.PLACE_ALL ||
+                event.action == InventoryAction.PLACE_ONE ||
+                event.action == InventoryAction.PLACE_SOME ||
+                event.action == InventoryAction.SWAP_WITH_CURSOR
+        val requiresInventorySync = event !is InventoryCreativeEvent &&
+                placesCursorItem &&
+                event.cursor.hasItemMeta()
+        val shouldRefreshHolders = inventoryClickTimeouts.getIfPresent(player.uniqueId) == null
 
-        if (inventoryClickTimeouts.getIfPresent(player.uniqueId) != null) {
+        if (!requiresInventorySync && !shouldRefreshHolders) {
             return
         }
 
-        inventoryClickTimeouts.put(player.uniqueId, Unit)
+        if (shouldRefreshHolders) {
+            inventoryClickTimeouts.put(player.uniqueId, Unit)
+        }
 
         val dispatcher = player.toDispatcher()
         SchedulerHelper.runTask(plugin, player) {
-            dispatcher.refreshHolders()
+            if (shouldRefreshHolders) {
+                dispatcher.refreshHolders()
+            }
+            if (requiresInventorySync) {
+                // CraftBukkit broadcasts only the carried item here. A full
+                // updateInventory() also re-sends every open-container slot,
+                // which makes chest and hotbar items visibly jump.
+                player.setItemOnCursor(player.itemOnCursor)
+            }
+        }
+    }
+
+    @EventHandler(priority = EventPriority.LOWEST)
+    fun onInventoryDrag(event: InventoryDragEvent) {
+        val player = event.whoClicked as? Player ?: return
+        if (!event.oldCursor.hasItemMeta()) {
+            return
+        }
+
+        val shouldRefreshHolders = inventoryClickTimeouts.getIfPresent(player.uniqueId) == null
+        if (shouldRefreshHolders) {
+            inventoryClickTimeouts.put(player.uniqueId, Unit)
+        }
+
+        val dispatcher = player.toDispatcher()
+        SchedulerHelper.runTask(plugin, player) {
+            if (shouldRefreshHolders) {
+                dispatcher.refreshHolders()
+            }
+            player.setItemOnCursor(player.itemOnCursor)
         }
     }
 }

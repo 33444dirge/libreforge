@@ -21,7 +21,7 @@ dependencies {
     compileOnly("com.github.MilkBowl:VaultAPI:1.7") {
         exclude("*", "*")
     }
-    compileOnly("com.github.ben-manes.caffeine:caffeine:3.2.3")
+    implementation("ca.spottedleaf:concurrentutil:0.0.10")
     compileOnly("com.github.brcdev-minecraft:shopgui-api:3.2.0") {
         exclude("*", "*")
     }
