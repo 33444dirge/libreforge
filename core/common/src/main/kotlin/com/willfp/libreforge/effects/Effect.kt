@@ -1,7 +1,6 @@
 package com.willfp.libreforge.effects
 
 import com.willfp.eco.core.config.interfaces.Config
-import com.willfp.eco.core.map.defaultMap
 import com.willfp.libreforge.Compilable
 import com.willfp.libreforge.Dispatcher
 import com.willfp.libreforge.ProvidedHolder
@@ -16,12 +15,13 @@ import com.willfp.libreforge.triggers.TriggerParameter
 import com.willfp.libreforge.triggers.Triggers
 import org.bukkit.event.Listener
 import java.util.UUID
+import java.util.concurrent.ConcurrentHashMap
 
 abstract class Effect<T>(
     final override val id: String
 ) : Compilable<T>(), Listener {
     // Maps Dispatcher UUIDs to the effect count.
-    private val effectCounter = defaultMap<UUID, Int>(0)
+    private val effectCounter = ConcurrentHashMap<UUID, Int>()
 
     // The identifier factory.
     private val identifierFactory = IdentifierFactory(UUID.nameUUIDFromBytes(id.toByteArray()))
@@ -78,8 +78,9 @@ abstract class Effect<T>(
         }
 
         // Increment first to fix reload bug where effects are applied twice.
-        effectCounter[dispatcher.uuid]++
-        val count = effectCounter[dispatcher.uuid]
+        val count = effectCounter.compute(dispatcher.uuid) { _, current ->
+            (current ?: 0) + 1
+        }!!
 
         val withHolder = config.config.applyHolder(holder, dispatcher)
 
@@ -111,11 +112,15 @@ abstract class Effect<T>(
             return
         }
 
-        if (effectCounter[dispatcher.uuid] == 0) {
-            return
+        var count = 0
+        effectCounter.computeIfPresent(dispatcher.uuid) { _, current ->
+            count = current
+            (current - 1).takeIf { it > 0 }
         }
 
-        val count = effectCounter[dispatcher.uuid]--
+        if (count == 0) {
+            return
+        }
 
         onDisable(dispatcher, identifierFactory.makeIdentifiers(count), holder)
     }

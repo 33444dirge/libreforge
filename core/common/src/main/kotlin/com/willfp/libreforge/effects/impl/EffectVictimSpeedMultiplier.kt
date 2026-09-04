@@ -12,6 +12,7 @@ import com.willfp.libreforge.plugin
 import com.willfp.libreforge.triggers.TriggerData
 import com.willfp.libreforge.triggers.TriggerParameter
 import org.bukkit.attribute.Attribute
+import org.bukkit.entity.LivingEntity
 
 object EffectVictimSpeedMultiplier : Effect<NoCompileData>("victim_speed_multiplier") {
     override val description = "Temporarily multiplies the victim's movement speed for a given duration."
@@ -57,13 +58,22 @@ object EffectVictimSpeedMultiplier : Effect<NoCompileData>("victim_speed_multipl
             attribute.baseValue = attributeValue * multiplier
         }
 
-        victim.setMetadata(META_KEY, plugin.createMetadataValue(true))
+        victim.setMetadata(META_KEY, plugin.createMetadataValue(attributeValue))
 
         SchedulerHelper.runTaskLater(plugin, victim, {
-            attribute.baseValue = attributeValue
-            victim.removeMetadata(META_KEY, plugin)
+            cleanup(victim)
         }, duration.toLong())
 
         return true
+    }
+
+    internal fun cleanup(victim: LivingEntity) {
+        val original = victim.getMetadata(META_KEY)
+            .firstOrNull { it.owningPlugin == plugin }
+            ?.value() as? Number
+        if (original != null) {
+            victim.getAttribute(Attribute.MOVEMENT_SPEED)?.baseValue = original.toDouble()
+        }
+        victim.removeMetadata(META_KEY, plugin)
     }
 }

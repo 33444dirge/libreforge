@@ -153,9 +153,12 @@ object EffectReplaceNear : Effect<NoCompileData>("replace_near") {
 
                         SchedulerHelper.runTaskLater(plugin, toReplace.location, {
                             if (toReplace.hasMetadata("rn-block")) {
-                                toReplace.type = oldBlock
-                                toReplace.blockData = oldBlockData
-                                toReplace.removeMetadata("rn-block", plugin)
+                                try {
+                                    toReplace.type = oldBlock
+                                    toReplace.blockData = oldBlockData
+                                } finally {
+                                    toReplace.removeMetadata("rn-block", plugin)
+                                }
                             }
                         }, duration.toLong())
                     }

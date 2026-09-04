@@ -48,7 +48,10 @@ object EffectBlockCommands : Effect<NoCompileData>("block_commands") {
     }
 
     override fun onDisable(dispatcher: Dispatcher<*>, identifiers: Identifiers, holder: ProvidedHolder) {
-        players[dispatcher.uuid]?.remove(identifiers.uuid)
+        players.computeIfPresent(dispatcher.uuid) { _, commands ->
+            commands.remove(identifiers.uuid)
+            commands.takeIf { it.isNotEmpty() }
+        }
         messages.remove(identifiers.uuid)
     }
 

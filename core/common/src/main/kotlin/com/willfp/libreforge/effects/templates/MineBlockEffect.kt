@@ -43,8 +43,11 @@ abstract class MineBlockEffect<T : Any>(id: String) : Effect<T>(id) {
                         }
 
                         block.setMetadata(ignoreKey, plugin.createMetadataValue(true))
-                        this.breakBlock(block)
-                        block.removeMetadata(ignoreKey, plugin)
+                        try {
+                            this.breakBlock(block)
+                        } finally {
+                            block.removeMetadata(ignoreKey, plugin)
+                        }
                     }
                 }
             }

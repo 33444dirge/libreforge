@@ -59,10 +59,14 @@ object EffectAddPoints : Effect<NoCompileData>("add_points") {
     override fun onDisable(dispatcher: Dispatcher<*>, identifiers: Identifiers, holder: ProvidedHolder) {
         val player = dispatcher.get<Player>() ?: return
 
-        val addedPoint = tracker[player.uniqueId]?.get(identifiers.uuid) ?: return
-        tracker[player.uniqueId]?.remove(identifiers.uuid)
+        var addedPoint: AddedPoint? = null
+        tracker.computeIfPresent(player.uniqueId) { _, points ->
+            addedPoint = points.remove(identifiers.uuid)
+            points.takeIf { it.isNotEmpty() }
+        }
+        val removedPoint = addedPoint ?: return
 
-        player.points[addedPoint.point] -= addedPoint.amount
+        player.points[removedPoint.point] -= removedPoint.amount
     }
 
     private data class AddedPoint(

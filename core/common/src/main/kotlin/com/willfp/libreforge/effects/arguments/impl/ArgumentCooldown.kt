@@ -35,6 +35,13 @@ object ArgumentCooldown : EffectArgument<Chain?>("cooldown") {
         val endTime = effectEndTimes[trigger.dispatcher.uuid] ?: return 0
 
         val msLeft = endTime - System.currentTimeMillis()
+        if (msLeft <= 0) {
+            cooldownTracker.computeIfPresent(group) { _, current ->
+                current.remove(trigger.dispatcher.uuid, endTime)
+                current.takeIf { it.isNotEmpty() }
+            }
+            return 0
+        }
         val secondsLeft = ceil(msLeft.toDouble() / 1000).toLong()
         return secondsLeft.toInt()
     }
@@ -42,9 +49,12 @@ object ArgumentCooldown : EffectArgument<Chain?>("cooldown") {
     override fun ifMet(element: ConfigurableElement, trigger: DispatchedTrigger, compileData: Chain?) {
         val group = element.config.getStringOrNull("cooldown_group") ?: element.uuid.toString()
 
-        val effectEndTimes = cooldownTracker.computeIfAbsent(group) { ConcurrentHashMap() }
-        effectEndTimes[trigger.dispatcher.uuid] = System.currentTimeMillis() +
-                (element.config.getDoubleFromExpression("cooldown", trigger.data) * 1000L).toLong()
+        cooldownTracker.compute(group) { _, existing ->
+            val effectEndTimes = existing ?: ConcurrentHashMap()
+            effectEndTimes[trigger.dispatcher.uuid] = System.currentTimeMillis() +
+                    (element.config.getDoubleFromExpression("cooldown", trigger.data) * 1000L).toLong()
+            effectEndTimes
+        }
     }
 
     override fun ifNotMet(element: ConfigurableElement, trigger: DispatchedTrigger, compileData: Chain?) {
@@ -85,5 +95,14 @@ object ArgumentCooldown : EffectArgument<Chain?>("cooldown") {
             config.getSubsections("cooldown_effects"),
             context.with("cooldown_effects")
         )
+    }
+
+    internal fun clearDispatcher(uuid: UUID) {
+        cooldownTracker.keys.forEach { group ->
+            cooldownTracker.computeIfPresent(group) { _, effectEndTimes ->
+                effectEndTimes.remove(uuid)
+                effectEndTimes.takeIf { it.isNotEmpty() }
+            }
+        }
     }
 }

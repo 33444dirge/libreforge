@@ -2,7 +2,6 @@ package com.willfp.libreforge.integrations.paper.impl
 
 import com.willfp.libreforge.ProvidedHolder
 import com.willfp.libreforge.holders
-import com.willfp.libreforge.plugin
 import com.willfp.libreforge.toDispatcher
 import com.willfp.libreforge.triggers.Trigger
 import com.willfp.libreforge.triggers.TriggerData
@@ -13,10 +12,11 @@ import org.bukkit.entity.Trident
 import org.bukkit.event.EventHandler
 import org.bukkit.event.entity.EntityDamageByEntityEvent
 import org.bukkit.event.entity.ProjectileLaunchEvent
-
-private const val META_KEY = "libreforge_trident_holders"
+import java.util.UUID
+import java.util.concurrent.ConcurrentHashMap
 
 object TriggerTridentAttack : Trigger("trident_attack") {
+    private val holderSnapshots = ConcurrentHashMap<UUID, Collection<ProvidedHolder>>()
     override val description = "Fires when the player's thrown trident hits an entity."
 
     override val categories = setOf("combat")
@@ -48,10 +48,7 @@ object TriggerTridentAttack : Trigger("trident_attack") {
         val shooter = event.entity.shooter as? LivingEntity ?: return
         val trident = event.entity as? Trident ?: return
 
-        trident.setMetadata(
-            META_KEY,
-            plugin.metadataValueFactory.create(shooter.toDispatcher().holders)
-        )
+        holderSnapshots[trident.uniqueId] = shooter.toDispatcher().holders.toList()
     }
 
     @EventHandler(ignoreCancelled = true)
@@ -74,7 +71,15 @@ object TriggerTridentAttack : Trigger("trident_attack") {
                 velocity = trident.velocity,
                 value = event.finalDamage
             ),
-            forceHolders = trident.getMetadata(META_KEY).firstOrNull()?.value() as? Collection<ProvidedHolder>
+            forceHolders = holderSnapshots[trident.uniqueId]
         )
+    }
+
+    internal fun clearSnapshot(uuid: UUID) {
+        holderSnapshots.remove(uuid)
+    }
+
+    internal fun clearSnapshots() {
+        holderSnapshots.clear()
     }
 }

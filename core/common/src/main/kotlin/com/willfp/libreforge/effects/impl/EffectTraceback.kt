@@ -13,6 +13,7 @@ import com.willfp.libreforge.triggers.TriggerData
 import com.willfp.libreforge.triggers.TriggerParameter
 import org.bukkit.Bukkit
 import org.bukkit.Location
+import java.util.UUID
 
 object EffectTraceback : Effect<NoCompileData>("traceback") {
     override val description = "Teleports the player back to where they were a specified number of seconds ago."
@@ -39,12 +40,14 @@ object EffectTraceback : Effect<NoCompileData>("traceback") {
         val time = config.getDoubleFromExpression("seconds", data).toInt().coerceIn(1..30)
 
         @Suppress("UNCHECKED_CAST")
-        val times = player.getMetadata(key).getOrNull(0)?.value() as? List<Location> ?: emptyList()
+        val times = player.getMetadata(key)
+            .firstOrNull { it.owningPlugin == plugin }
+            ?.value() as? List<TracebackPoint> ?: emptyList()
 
         // Most recent is last
         val index = times.size - time
 
-        val location = times.getOrElse(index) { times.lastOrNull() } ?: return false
+        val location = times.getOrElse(index) { times.lastOrNull() }?.toLocation() ?: return false
 
         SchedulerHelper.teleportEntity(player, location)
 
@@ -54,15 +57,46 @@ object EffectTraceback : Effect<NoCompileData>("traceback") {
     override fun postRegister() {
         val task = FoliaRunnableTask(plugin) {
             for (player in Bukkit.getOnlinePlayers()) {
-                @Suppress("UNCHECKED_CAST")
-                val times = player.getMetadata(key).getOrNull(0)?.value() as? List<Location> ?: emptyList()
-                val newTimes = (if (times.size < 30) times else times.drop(1)) + player.location
+                SchedulerHelper.runTask(plugin, player) {
+                    @Suppress("UNCHECKED_CAST")
+                    val times = player.getMetadata(key)
+                        .firstOrNull { it.owningPlugin == plugin }
+                        ?.value() as? List<TracebackPoint> ?: emptyList()
+                    val location = player.location
+                    val worldId = location.world?.uid ?: return@runTask
+                    val point = TracebackPoint(
+                        worldId,
+                        location.x,
+                        location.y,
+                        location.z,
+                        location.yaw,
+                        location.pitch
+                    )
+                    val newTimes = (if (times.size < 30) times else times.drop(1)) + point
 
-                player.removeMetadata(key, plugin)
-                player.setMetadata(key, plugin.metadataValueFactory.create(newTimes))
+                    player.removeMetadata(key, plugin)
+                    player.setMetadata(key, plugin.metadataValueFactory.create(newTimes))
+                }
             }
         }
 
         task.runTask(20L, 20L)
+    }
+
+    internal fun clear(player: org.bukkit.entity.Player) {
+        player.removeMetadata(key, plugin)
+    }
+
+    private data class TracebackPoint(
+        val worldId: UUID,
+        val x: Double,
+        val y: Double,
+        val z: Double,
+        val yaw: Float,
+        val pitch: Float
+    ) {
+        fun toLocation(): Location? = Bukkit.getWorld(worldId)?.let {
+            Location(it, x, y, z, yaw, pitch)
+        }
     }
 }

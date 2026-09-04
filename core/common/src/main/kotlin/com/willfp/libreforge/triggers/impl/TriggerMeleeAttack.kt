@@ -49,20 +49,23 @@ object TriggerMeleeAttack : Trigger("melee_attack") {
             return
         }
 
-        processedEvents.add(event.entity.uniqueId)
+        val victimId = event.entity.uniqueId
+        processedEvents.add(victimId)
 
-        this.dispatch(
-            attacker.toDispatcher(),
-            TriggerData(
-                player = attacker as? Player,
-                victim = victim,
-                location = victim.location,
-                event = event,
-                item = attacker.equipment?.itemInMainHand,
-                value = event.finalDamage
+        try {
+            this.dispatch(
+                attacker.toDispatcher(),
+                TriggerData(
+                    player = attacker as? Player,
+                    victim = victim,
+                    location = victim.location,
+                    event = event,
+                    item = attacker.equipment?.itemInMainHand,
+                    value = event.finalDamage
+                )
             )
-        )
-
-        processedEvents.clear()
+        } finally {
+            processedEvents.remove(victimId)
+        }
     }
 }

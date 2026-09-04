@@ -30,7 +30,10 @@ object EffectFeatherStep : Effect<NoCompileData>("feather_step") {
     }
 
     override fun onDisable(dispatcher: Dispatcher<*>, identifiers: Identifiers, holder: ProvidedHolder) {
-        players[dispatcher.uuid]?.remove(identifiers.uuid)
+        players.computeIfPresent(dispatcher.uuid) { _, active ->
+            active.remove(identifiers.uuid)
+            active.takeIf { it.isNotEmpty() }
+        }
     }
 
     @EventHandler(ignoreCancelled = true)

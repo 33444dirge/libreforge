@@ -28,7 +28,10 @@ object EffectKeepInventory : Effect<NoCompileData>("keep_inventory") {
     }
 
     override fun onDisable(dispatcher: Dispatcher<*>, identifiers: Identifiers, holder: ProvidedHolder) {
-        players[dispatcher.uuid]?.remove(identifiers.uuid)
+        players.computeIfPresent(dispatcher.uuid) { _, active ->
+            active.remove(identifiers.uuid)
+            active.takeIf { it.isNotEmpty() }
+        }
     }
 
     @EventHandler(ignoreCancelled = true)

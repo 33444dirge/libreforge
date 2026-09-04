@@ -49,7 +49,10 @@ object EffectMythicTelekinesis : Effect<NoCompileData>("telekinesis") {
     }
 
     override fun onDisable(dispatcher: Dispatcher<*>, identifiers: Identifiers, holder: ProvidedHolder) {
-        players[dispatcher.uuid]?.remove(identifiers.uuid)
+        players.computeIfPresent(dispatcher.uuid) { _, active ->
+            active.remove(identifiers.uuid)
+            active.takeIf { it.isNotEmpty() }
+        }
     }
 
     override fun postRegister() {

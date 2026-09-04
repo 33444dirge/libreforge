@@ -19,6 +19,7 @@ import com.willfp.libreforge.toVector
 import com.willfp.libreforge.triggers.TriggerData
 import com.willfp.libreforge.triggers.TriggerParameter
 import org.bukkit.GameMode
+import org.bukkit.entity.Entity
 import org.bukkit.entity.AbstractArrow
 import org.bukkit.entity.EntityType
 import org.bukkit.entity.LivingEntity
@@ -119,6 +120,7 @@ object EffectHoming : Effect<List<TestableEntity>>("homing") {
             checks++
 
             if (checks > MAX_CHECKS || arrow.isDead || arrow.isInBlock || arrow.isOnGround) {
+                cleanupRemovedEntity(arrow)
                 task?.cancel()
             } else {
                 val arrowPos = arrow.location.toFloat3()
@@ -146,6 +148,7 @@ object EffectHoming : Effect<List<TestableEntity>>("homing") {
                         val dist = arrowPos.distance(targetPos)
 
                         if (dist < 1.0f) {
+                            cleanupRemovedEntity(arrow)
                             task?.cancel()
                             break
                         }
@@ -185,6 +188,12 @@ object EffectHoming : Effect<List<TestableEntity>>("homing") {
         }
 
         task.runTask(arrow, 3L, CHECK_DELAY)
+    }
+
+    internal fun cleanupRemovedEntity(entity: Entity) {
+        entity.removeMetadata(META_KEY_DISTANCE, plugin)
+        entity.removeMetadata(META_KEY_TARGETS, plugin)
+        entity.removeMetadata(META_KEY_TRACKED, plugin)
     }
 
     /**

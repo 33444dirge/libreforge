@@ -5,8 +5,12 @@ import com.willfp.libreforge.triggers.Trigger
 import com.willfp.libreforge.triggers.TriggerData
 import com.willfp.libreforge.triggers.TriggerParameter
 import org.bukkit.event.EventHandler
+import org.bukkit.event.inventory.InventoryCloseEvent
 import org.bukkit.event.inventory.PrepareAnvilEvent
+import org.bukkit.event.inventory.InventoryType
+import org.bukkit.event.player.PlayerQuitEvent
 import org.purpurmc.purpur.event.inventory.AnvilTakeResultEvent
+import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 
 object TriggerAnvilModify : Trigger("anvil_modify") {
@@ -27,7 +31,7 @@ object TriggerAnvilModify : Trigger("anvil_modify") {
         TriggerParameter.VALUE
     )
 
-    private val playerCosts = ConcurrentHashMap<org.bukkit.entity.Player, Int>()
+    private val playerCosts = ConcurrentHashMap<UUID, Int>()
 
     // Capture the cost when the result is prepared
     @EventHandler(ignoreCancelled = true)
@@ -35,7 +39,7 @@ object TriggerAnvilModify : Trigger("anvil_modify") {
         val player = event.viewers.firstOrNull() as? org.bukkit.entity.Player ?: return
 
         @Suppress("DEPRECATION", "REMOVAL")
-        playerCosts[player] = event.inventory.repairCost
+        playerCosts[player.uniqueId] = event.inventory.repairCost
     }
 
     // Fire trigger when item is actually taken
@@ -45,7 +49,7 @@ object TriggerAnvilModify : Trigger("anvil_modify") {
         @Suppress("USELESS_ELVIS")
         val result = event.result ?: return
 
-        val cost = playerCosts.remove(player) ?: return
+        val cost = playerCosts.remove(player.uniqueId) ?: return
 
         this.dispatch(
             player.toDispatcher(),
@@ -55,5 +59,17 @@ object TriggerAnvilModify : Trigger("anvil_modify") {
                 value = cost.toDouble()
             )
         )
+    }
+
+    @EventHandler
+    fun onClose(event: InventoryCloseEvent) {
+        if (event.inventory.type == InventoryType.ANVIL) {
+            playerCosts.remove(event.player.uniqueId)
+        }
+    }
+
+    @EventHandler
+    fun onQuit(event: PlayerQuitEvent) {
+        playerCosts.remove(event.player.uniqueId)
     }
 }

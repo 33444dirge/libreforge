@@ -69,42 +69,44 @@ object EffectDamageNearbyEntities : Effect<Collection<TestableEntity>>("damage_n
         val damage = config.getDoubleFromExpression("damage", data)
         val damageSelf = config.getBoolOrNull("damage_self") ?: true
 
-        for (entity in world.getNearbyEntities(location, radius, radius, radius)) {
-            if (entity.hasMetadata("ignore-nearby-damage") || damagedEntities.contains(entity.uniqueId)) {
-                continue
-            }
-
-            if (entity !is LivingEntity) {
-                continue
-            }
-
-            if (!AntigriefManager.canInjure(player, entity)) {
-                continue
-            }
-
-            if (compileData.isNotEmpty()) {
-                if (compileData.none { it.matches(entity) }) {
+        try {
+            for (entity in world.getNearbyEntities(location, radius, radius, radius)) {
+                if (entity.hasMetadata("ignore-nearby-damage") || damagedEntities.contains(entity.uniqueId)) {
                     continue
                 }
+
+                if (entity !is LivingEntity) {
+                    continue
+                }
+
+                if (!damageSelf && entity == player) {
+                    continue
+                }
+
+                if (!AntigriefManager.canInjure(player, entity)) {
+                    continue
+                }
+
+                if (compileData.isNotEmpty()) {
+                    if (compileData.none { it.matches(entity) }) {
+                        continue
+                    }
+                }
+
+                entity.setMetadata("ignore-nearby-damage", plugin.metadataValueFactory.create(true))
+                SchedulerHelper.runTaskLater(plugin, entity, { entity.removeMetadata("ignore-nearby-damage", plugin) }, 5)
+
+                damagedEntities.add(entity.uniqueId)
+
+                if (damageAsPlayer) {
+                    entity.damage(damage, player)
+                } else {
+                    entity.damage(damage)
+                }
             }
-
-            entity.setMetadata("ignore-nearby-damage", plugin.metadataValueFactory.create(true))
-            SchedulerHelper.runTaskLater(plugin, entity, { entity.removeMetadata("ignore-nearby-damage", plugin) }, 5)
-
-            if (!damageSelf && (entity == player)) {
-                continue
-            }
-
-            damagedEntities.add(entity.uniqueId)
-
-            if (damageAsPlayer) {
-                entity.damage(damage, player)
-            } else {
-                entity.damage(damage)
-            }
+        } finally {
+            damagedEntities.clear()
         }
-
-        damagedEntities.clear()
 
         return true
     }

@@ -10,6 +10,7 @@ import org.bukkit.event.Event
 import org.bukkit.event.HandlerList
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.TimeUnit
 
 
@@ -108,12 +109,24 @@ data class ProvidedEffectBlock(
     }
 }
 
-private val providers = mutableListOf<HolderProvider>()
+private val providers = CopyOnWriteArrayList<HolderProvider>()
 
 /**
  * Register a new holder provider.
  */
 fun registerHolderProvider(provider: HolderProvider) = providers.add(provider)
+
+/**
+ * Unregister a holder provider that is no longer active.
+ */
+fun unregisterHolderProvider(provider: HolderProvider) = providers.remove(provider)
+
+/**
+ * Release providers registered by a dependent plugin when that plugin is disabled.
+ */
+internal fun unregisterHolderProvidersOwnedBy(classLoader: ClassLoader) {
+    providers.removeIf { it.javaClass.classLoader === classLoader }
+}
 
 /**
  * Register a new holder provider for all possible dispatchers.
@@ -338,8 +351,10 @@ internal fun Dispatcher<*>.purgePreviousHolders() {
 }
 
 internal fun clearAllHolderCaches() {
+    holderCooldown?.invalidateAll()
     holderCache.invalidateAll()
     previousHolders.invalidateAll()
+    previousStates.clear()
 }
 
 // Effects that were active on previous update
