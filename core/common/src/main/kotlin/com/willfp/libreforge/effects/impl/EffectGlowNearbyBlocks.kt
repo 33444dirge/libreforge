@@ -18,6 +18,7 @@ import org.bukkit.Bukkit
 import org.bukkit.ChatColor
 import org.bukkit.Material
 import org.bukkit.block.Block
+import org.bukkit.entity.Entity
 import org.bukkit.entity.EntityType
 import org.bukkit.entity.LivingEntity
 import org.bukkit.entity.Shulker
@@ -102,14 +103,13 @@ object EffectGlowNearbyBlocks : Effect<NoCompileData>("glow_nearby_blocks") {
             shulker.setGravity(false)
             shulker.isGlowing = true
             shulker.isInvisible = true
-            shulker.setMetadata("gnb-shulker", plugin.metadataValueFactory.create(true))
+            shulker.setMetadata("gnb-shulker", plugin.metadataValueFactory.create(GlowMeta(team.name)))
             team.addEntry(shulker.uniqueId.toString())
             block.setMetadata("gnb-uuid", plugin.metadataValueFactory.create(shulker.uniqueId))
 
             SchedulerHelper.runTaskLater(plugin, shulker, {
-                team.removeEntry(shulker.uniqueId.toString())
+                cleanupRemovedEntity(shulker)
                 shulker.remove()
-                block.removeMetadata("gnb-uuid", plugin)
             }, duration.toLong())
         }
 
@@ -120,14 +120,20 @@ object EffectGlowNearbyBlocks : Effect<NoCompileData>("glow_nearby_blocks") {
     fun handleChunkUnload(event: ChunkUnloadEvent) {
         event.chunk.entities.filterIsInstance<LivingEntity>()
             .filter { it.hasMetadata("gnb-shulker") }
-            .forEach { it.remove() }
+            .forEach {
+                cleanupRemovedEntity(it)
+                it.remove()
+            }
     }
 
     @EventHandler
     fun handleChunkLoad(event: ChunkLoadEvent) {
         event.chunk.entities.filterIsInstance<LivingEntity>()
             .filter { it.hasMetadata("gnb-shulker") }
-            .forEach { it.remove() }
+            .forEach {
+                cleanupRemovedEntity(it)
+                it.remove()
+            }
     }
 
     @EventHandler
@@ -139,8 +145,10 @@ object EffectGlowNearbyBlocks : Effect<NoCompileData>("glow_nearby_blocks") {
         }
 
         val uuid = block.getMetadata("gnb-uuid").firstOrNull {
-            it.value() is UUID
+            it.owningPlugin == plugin && it.value() is UUID
         }?.value() as? UUID ?: return
+
+        block.removeMetadata("gnb-uuid", plugin)
 
         Bukkit.getServer().getEntity(uuid)?.remove()
 
@@ -153,4 +161,18 @@ object EffectGlowNearbyBlocks : Effect<NoCompileData>("glow_nearby_blocks") {
             shulker.remove()
         }
     }
+
+    internal fun cleanupRemovedEntity(entity: Entity) {
+        val meta = entity.getMetadata("gnb-shulker")
+            .firstOrNull { it.owningPlugin == plugin }
+            ?.value() as? GlowMeta
+        meta?.let {
+            Bukkit.getScoreboardManager()?.mainScoreboard?.getTeam(it.teamName)
+                ?.removeEntry(entity.uniqueId.toString())
+            entity.location.block.removeMetadata("gnb-uuid", plugin)
+        }
+        entity.removeMetadata("gnb-shulker", plugin)
+    }
+
+    private data class GlowMeta(val teamName: String)
 }

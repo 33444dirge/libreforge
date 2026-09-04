@@ -13,10 +13,15 @@ import java.net.http.HttpResponse
 import java.util.concurrent.Executors
 import java.util.concurrent.Future
 
-
-private val executor = Executors.newSingleThreadExecutor()
+private val executor = Executors.newSingleThreadExecutor { runnable ->
+    Thread(runnable, "libreforge-lrcdb").apply { isDaemon = true }
+}
 
 internal fun <T> onLrcdbThread(action: () -> T): Future<T> = executor.submit(action)
+
+internal fun shutdownLrcdbThread() {
+    executor.shutdownNow()
+}
 
 private val client = HttpClient.newBuilder().build()
 

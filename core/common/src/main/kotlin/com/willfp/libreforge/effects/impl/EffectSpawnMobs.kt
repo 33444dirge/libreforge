@@ -15,6 +15,7 @@ import com.willfp.libreforge.plugin
 import com.willfp.libreforge.triggers.TriggerData
 import com.willfp.libreforge.triggers.TriggerParameter
 import org.bukkit.attribute.Attribute
+import org.bukkit.Bukkit
 import org.bukkit.entity.LivingEntity
 import org.bukkit.entity.Mob
 import org.bukkit.entity.Tameable
@@ -104,7 +105,7 @@ object EffectSpawnMobs : Effect<TestableEntity>("spawn_mobs") {
 
                 if (victim != null) {
                     mob.target = victim
-                    mob.setMetadata("spawn-mobs-target", plugin.createMetadataValue(victim))
+                    mob.setMetadata("spawn-mobs-target", plugin.createMetadataValue(victim.uniqueId))
                 }
 
                 if (player != null) {
@@ -112,7 +113,11 @@ object EffectSpawnMobs : Effect<TestableEntity>("spawn_mobs") {
                 }
             }
 
-            SchedulerHelper.runTaskLater(plugin, mob, { mob.remove() }, ticksToLive.toLong())
+            SchedulerHelper.runTaskLater(plugin, mob, {
+                mob.removeMetadata("spawn-mobs-target", plugin)
+                mob.removeMetadata("spawn-mobs-avoid", plugin)
+                mob.remove()
+            }, ticksToLive.toLong())
         }
 
         return true
@@ -124,13 +129,22 @@ object EffectSpawnMobs : Effect<TestableEntity>("spawn_mobs") {
 
     @EventHandler
     fun onSwitchTarget(event: EntityTargetEvent) {
-        if (event.entity.getMetadata("spawn-mobs-target").isNotEmpty()) {
-            val target = event.entity.getMetadata("spawn-mobs-target")[0].value() as? LivingEntity ?: return
+        val targetId = event.entity.getMetadata("spawn-mobs-target")
+            .firstOrNull { it.owningPlugin == plugin }
+            ?.value() as? UUID
+        if (targetId != null) {
+            val target = Bukkit.getEntity(targetId) as? LivingEntity
+            if (target == null) {
+                event.entity.removeMetadata("spawn-mobs-target", plugin)
+                return
+            }
             event.target = target
         }
 
-        if (event.entity.getMetadata("spawn-mobs-avoid").isNotEmpty()) {
-            val uuid = event.entity.getMetadata("spawn-mobs-avoid")[0].value() as? UUID ?: return
+        val uuid = event.entity.getMetadata("spawn-mobs-avoid")
+            .firstOrNull { it.owningPlugin == plugin }
+            ?.value() as? UUID
+        if (uuid != null) {
             if (event.target?.uniqueId == uuid) {
                 event.isCancelled = true
             }
@@ -139,7 +153,7 @@ object EffectSpawnMobs : Effect<TestableEntity>("spawn_mobs") {
 
     @EventHandler(priority = EventPriority.LOW)
     fun onDropItem(event: EntityDeathEvent) {
-        if (event.entity.getMetadata("spawn-mobs-target").isEmpty()) {
+        if (event.entity.getMetadata("spawn-mobs-target").none { it.owningPlugin == plugin }) {
             return
         }
 

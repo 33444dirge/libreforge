@@ -12,21 +12,23 @@ import com.willfp.libreforge.effects.Chain
 import com.willfp.libreforge.effects.Effect
 import com.willfp.libreforge.effects.Effects
 import com.willfp.libreforge.effects.executors.ChainExecutors
-import com.willfp.libreforge.plugin
 import com.willfp.libreforge.toDispatcher
 import com.willfp.libreforge.triggers.DispatchedTrigger
 import com.willfp.libreforge.triggers.TriggerData
 import com.willfp.libreforge.triggers.TriggerParameter
 import org.bukkit.ChatColor
+import org.bukkit.entity.Entity
 import org.bukkit.event.EventHandler
 import org.bukkit.event.player.PlayerAttemptPickupItemEvent
 import org.bukkit.scoreboard.Team
+import java.util.UUID
+import java.util.concurrent.ConcurrentHashMap
 
 object EffectDropPickupItem : Effect<Chain?>("drop_pickup_item") {
     override val description = "Drops a custom item at the trigger location that executes a set of effects when a player picks it up."
     override val categories = setOf("inventory")
 
-    private const val META_KEY = "libreforge:pickup_item"
+    private val pendingItems = ConcurrentHashMap<UUID, Meta>()
 
     override val parameters = setOf(
         TriggerParameter.LOCATION,
@@ -77,7 +79,7 @@ object EffectDropPickupItem : Effect<Chain?>("drop_pickup_item") {
             glowColor?.let { TeamUtils.fromChatColor(it) }
         )
 
-        item.setMetadata(META_KEY, plugin.metadataValueFactory.create(meta))
+        pendingItems[item.uniqueId] = meta
 
         if (glowColor != null) {
             val team = TeamUtils.fromChatColor(glowColor)
@@ -92,17 +94,25 @@ object EffectDropPickupItem : Effect<Chain?>("drop_pickup_item") {
     fun onPickup(event: PlayerAttemptPickupItemEvent) {
         val item = event.item
 
-        if (!item.hasMetadata(META_KEY)) {
-            return
-        }
-
-        val meta = item.getMetadata(META_KEY).firstOrNull()?.value() as? Meta ?: return
+        val meta = pendingItems.remove(item.uniqueId) ?: return
 
         event.isCancelled = true
         item.remove()
 
         meta.chain.trigger(meta.trigger)
         meta.team?.removeEntry(item.uniqueId.toString())
+    }
+
+    internal fun cleanupRemovedEntity(entity: Entity) {
+        val meta = pendingItems.remove(entity.uniqueId)
+        meta?.team?.removeEntry(entity.uniqueId.toString())
+    }
+
+    internal fun clearAll() {
+        pendingItems.forEach { (uuid, meta) ->
+            meta.team?.removeEntry(uuid.toString())
+        }
+        pendingItems.clear()
     }
 
     override fun makeCompileData(config: Config, context: ViolationContext): Chain? {

@@ -58,7 +58,10 @@ class EffectGivePermission(
         val permission = permissions[dispatcher.uuid]
             ?.firstOrNull { it.uuid == identifiers.uuid } ?: return
 
-        permissions[dispatcher.uuid]?.remove(permission)
+        permissions.computeIfPresent(dispatcher.uuid) { _, active ->
+            active.remove(permission)
+            active.takeIf { it.isNotEmpty() }
+        }
 
         // Remove the permission only if no other effect is giving it
         if (permissions[dispatcher.uuid]?.none { it.permission == permission.permission } != false) {

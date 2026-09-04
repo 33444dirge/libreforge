@@ -3,6 +3,7 @@ package com.willfp.libreforge.effects.impl
 import com.willfp.eco.core.config.interfaces.Config
 import com.willfp.libreforge.ArgType
 import com.willfp.libreforge.NoCompileData
+import com.willfp.libreforge.SchedulerHelper
 import com.willfp.libreforge.arguments
 import com.willfp.libreforge.effects.Effect
 import com.willfp.libreforge.getDoubleFromExpression
@@ -37,13 +38,24 @@ object EffectIgnite : Effect<NoCompileData>("ignite") {
         )
     }
 
+    private const val META_KEY = "libreforge-ignite"
+
     override fun onTrigger(config: Config, data: TriggerData, compileData: NoCompileData): Boolean {
         val victim = data.victim ?: return false
         val damage = config.getDoubleFromExpression("damage_per_tick", data)
         val duration = config.getIntFromExpression("ticks", data)
 
         victim.fireTicks = duration
-        victim.setMetadata("libreforge-ignite", plugin.createMetadataValue(damage))
+        val ignite = IgniteData(damage)
+        victim.setMetadata(META_KEY, plugin.createMetadataValue(ignite))
+        SchedulerHelper.runTaskLater(plugin, victim, {
+            val current = victim.getMetadata(META_KEY)
+                .firstOrNull { it.owningPlugin == plugin }
+                ?.value()
+            if (current === ignite) {
+                victim.removeMetadata(META_KEY, plugin)
+            }
+        }, duration.toLong().coerceAtLeast(1L) + 1L)
 
         return true
     }
@@ -53,10 +65,11 @@ object EffectIgnite : Effect<NoCompileData>("ignite") {
         if (event.cause != EntityDamageEvent.DamageCause.FIRE_TICK) {
             return
         }
-        if (!event.entity.hasMetadata("libreforge-ignite")) {
-            return
-        }
-
-        event.damage = event.entity.getMetadata("libreforge-ignite")[0].asDouble()
+        val ignite = event.entity.getMetadata(META_KEY)
+            .firstOrNull { it.owningPlugin == plugin }
+            ?.value() as? IgniteData ?: return
+        event.damage = ignite.damage
     }
+
+    private data class IgniteData(val damage: Double)
 }

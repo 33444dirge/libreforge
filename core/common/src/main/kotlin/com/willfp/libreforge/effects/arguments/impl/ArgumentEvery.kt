@@ -28,15 +28,23 @@ object ArgumentEvery: EffectArgument<NoCompileData>("every") {
     private fun increment(element: ConfigurableElement, trigger: DispatchedTrigger) {
         val every = element.config.getIntFromExpression("every", trigger.data)
 
-        val inner = everyHandler.computeIfAbsent(element.uuid) { ConcurrentHashMap() }
-        var current = inner[trigger.dispatcher.uuid] ?: 1
-
-        current++
-
-        if (current >= every) {
-            current = 0
+        everyHandler.compute(element.uuid) { _, existing ->
+            val inner = existing ?: ConcurrentHashMap()
+            var current = (inner[trigger.dispatcher.uuid] ?: 1) + 1
+            if (current >= every) {
+                current = 0
+            }
+            inner[trigger.dispatcher.uuid] = current
+            inner
         }
+    }
 
-        inner[trigger.dispatcher.uuid] = current
+    internal fun clearDispatcher(uuid: UUID) {
+        everyHandler.keys.forEach { elementId ->
+            everyHandler.computeIfPresent(elementId) { _, inner ->
+                inner.remove(uuid)
+                inner.takeIf { it.isNotEmpty() }
+            }
+        }
     }
 }

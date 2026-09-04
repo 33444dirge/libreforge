@@ -58,7 +58,10 @@ object EffectKeepItem : Effect<NoCompileData>("keep_item") {
     }
 
     override fun onDisable(dispatcher: Dispatcher<*>, identifiers: Identifiers, holder: ProvidedHolder) {
-        players[dispatcher.uuid].removeAll { it.first == identifiers.uuid }
+        players.computeIfPresent(dispatcher.uuid) { _, active ->
+            active.removeAll { it.first == identifiers.uuid }
+            active.takeIf { it.isNotEmpty() }
+        }
     }
 
     @EventHandler(ignoreCancelled = true)

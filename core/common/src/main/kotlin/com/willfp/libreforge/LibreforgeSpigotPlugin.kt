@@ -19,6 +19,7 @@ import com.willfp.libreforge.configs.ChainsYml
 import com.willfp.libreforge.configs.CommandsYml
 import com.willfp.libreforge.configs.PlaceholdersYml
 import com.willfp.libreforge.configs.TagsYml
+import com.willfp.libreforge.configs.shutdownLrcdbThread
 import com.willfp.libreforge.configs.lrcdb.CommandLrcdb
 import com.willfp.libreforge.display.ItemFlagDisplay
 import com.willfp.libreforge.effects.Effects
@@ -49,6 +50,8 @@ import com.willfp.libreforge.integrations.mcmmo.McMMOIntegration
 import com.willfp.libreforge.integrations.modelengine.ModelEngineIntegration
 import com.willfp.libreforge.integrations.mythicmobs.MythicMobsIntegration
 import com.willfp.libreforge.integrations.paper.PaperIntegration
+import com.willfp.libreforge.integrations.paper.impl.EffectDropPickupItem
+import com.willfp.libreforge.integrations.paper.impl.TriggerTridentAttack
 import com.willfp.libreforge.integrations.purpur.PurpurIntegration
 import com.willfp.libreforge.integrations.scyther.ScytherIntegration
 import com.willfp.libreforge.integrations.shopkeepers.ShopkeepersIntegration
@@ -75,6 +78,8 @@ import com.willfp.libreforge.tags.CustomEntityTag
 import com.willfp.libreforge.tags.CustomTag
 import com.willfp.libreforge.triggers.DispatchedTriggerFactory
 import com.willfp.libreforge.triggers.Triggers
+import com.willfp.libreforge.triggers.impl.TriggerTridentHit
+import com.willfp.libreforge.triggers.placeholders.impl.TriggerPlaceholderHits
 import org.bukkit.Bukkit
 import org.bukkit.entity.LivingEntity
 import org.bukkit.event.Listener
@@ -148,6 +153,15 @@ class LibreforgeSpigotPlugin : EcoPlugin() {
         ItemProgressPlaceholder(this).register()
         ItemDataPlaceholder(this).register()
         BossBarProgressPlaceholder(this).register()
+    }
+
+    override fun handleDisable() {
+        shutdownLrcdbThread()
+        TriggerTridentHit.clearSnapshots()
+        TriggerTridentAttack.clearSnapshots()
+        TriggerPlaceholderHits.clearAll()
+        EffectDropPickupItem.clearAll()
+        clearAllHolderCaches()
     }
 
     override fun handleReload() {
@@ -231,6 +245,7 @@ class LibreforgeSpigotPlugin : EcoPlugin() {
     override fun loadListeners(): List<Listener> {
         val listeners = mutableListOf(
             EffectDataFixer,
+            DependencyLifecycleFixer,
             ItemRefreshListener,
             EntityRefreshListener,
             AttackCooldownSnapshot

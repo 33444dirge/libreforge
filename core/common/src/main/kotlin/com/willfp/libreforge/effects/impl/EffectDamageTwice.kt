@@ -33,8 +33,12 @@ object EffectDamageTwice : Effect<NoCompileData>("damage_twice") {
 
         plugin.scheduler.run {
             victim.setMetadata(META_KEY, plugin.createMetadataValue(true))
-            victim.noDamageTicks = 0
-            victim.damage(event.damage, event.damager)
+            try {
+                victim.noDamageTicks = 0
+                victim.damage(event.damage, event.damager)
+            } finally {
+                victim.removeMetadata(META_KEY, plugin)
+            }
         }
 
         return true

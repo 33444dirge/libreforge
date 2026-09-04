@@ -5,6 +5,7 @@ import com.willfp.libreforge.ArgType
 import com.willfp.libreforge.Dispatcher
 import com.willfp.libreforge.NoCompileData
 import com.willfp.libreforge.ProvidedHolder
+import com.willfp.libreforge.SchedulerHelper
 import com.willfp.libreforge.arguments
 import com.willfp.libreforge.effects.Effect
 import com.willfp.libreforge.effects.Identifiers
@@ -98,15 +99,14 @@ object EffectPermanentPotionEffect : Effect<NoCompileData>("permanent_potion_eff
     fun onRespawn(event: PlayerRespawnEvent) {
         val player = event.player
 
-        plugin.server.scheduler.runTask(plugin, Runnable {
+        SchedulerHelper.runTask(plugin, player) {
             val types = getHolderData(player)
                 .values
                 .map { it.effectType }
                 .toSet()
 
             types.forEach { refreshEffectsOfType(player, it) }
-            }
-        )
+        }
     }
 
     override fun onEnable(
@@ -138,8 +138,16 @@ object EffectPermanentPotionEffect : Effect<NoCompileData>("permanent_potion_eff
 
         val holderData = getHolderData(player)
         val removed = holderData.remove(identifiers.uuid) ?: return
-        player.setMetadata(metaKey, plugin.metadataValueFactory.create(holderData))
+        if (holderData.isEmpty()) {
+            player.removeMetadata(metaKey, plugin)
+        } else {
+            player.setMetadata(metaKey, plugin.metadataValueFactory.create(holderData))
+        }
 
         refreshEffectsOfType(player, removed.effectType)
+    }
+
+    internal fun clear(player: Player) {
+        player.removeMetadata(metaKey, plugin)
     }
 }

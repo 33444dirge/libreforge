@@ -2,7 +2,6 @@ package com.willfp.libreforge.triggers.impl
 
 import com.willfp.libreforge.ProvidedHolder
 import com.willfp.libreforge.holders
-import com.willfp.libreforge.plugin
 import com.willfp.libreforge.toDispatcher
 import com.willfp.libreforge.triggers.Trigger
 import com.willfp.libreforge.triggers.TriggerData
@@ -14,10 +13,11 @@ import org.bukkit.event.EventHandler
 import org.bukkit.event.entity.EntityDamageByEntityEvent
 import org.bukkit.event.entity.ProjectileHitEvent
 import org.bukkit.event.entity.ProjectileLaunchEvent
-
-private const val META_KEY = "libreforge_trident_hit_holders"
+import java.util.UUID
+import java.util.concurrent.ConcurrentHashMap
 
 object TriggerTridentHit : Trigger("trident_hit") {
+    private val holderSnapshots = ConcurrentHashMap<UUID, Collection<ProvidedHolder>>()
     override val description = "Fires when the player's thrown trident hits a block or entity."
 
     override val categories = setOf("combat")
@@ -45,10 +45,7 @@ object TriggerTridentHit : Trigger("trident_hit") {
         val trident = event.entity as? Trident ?: return
         val shooter = trident.shooter as? LivingEntity ?: return
 
-        trident.setMetadata(
-            META_KEY,
-            plugin.metadataValueFactory.create(shooter.toDispatcher().holders)
-        )
+        holderSnapshots[trident.uniqueId] = shooter.toDispatcher().holders.toList()
     }
 
     @EventHandler(ignoreCancelled = true)
@@ -67,7 +64,7 @@ object TriggerTridentHit : Trigger("trident_hit") {
                 event = event,
                 velocity = trident.velocity
             ),
-            forceHolders = trident.getMetadata(META_KEY).firstOrNull()?.value() as? Collection<ProvidedHolder>
+            forceHolders = holderSnapshots[trident.uniqueId]
         )
     }
 
@@ -88,7 +85,15 @@ object TriggerTridentHit : Trigger("trident_hit") {
                 velocity = trident.velocity,
                 projectile = trident
             ),
-            forceHolders = trident.getMetadata(META_KEY).firstOrNull()?.value() as? Collection<ProvidedHolder>
+            forceHolders = holderSnapshots[trident.uniqueId]
         )
+    }
+
+    internal fun clearSnapshot(uuid: UUID) {
+        holderSnapshots.remove(uuid)
+    }
+
+    internal fun clearSnapshots() {
+        holderSnapshots.clear()
     }
 }

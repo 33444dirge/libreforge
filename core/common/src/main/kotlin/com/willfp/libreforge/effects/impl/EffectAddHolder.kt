@@ -106,6 +106,10 @@ object EffectAddHolder : Effect<HolderTemplate>("add_holder") {
         return holders
     }
 
+    internal fun clearDispatcher(uuid: UUID) {
+        holders.remove(uuid)
+    }
+
     @EventHandler
     fun onPlayerLogout(event: PlayerQuitEvent) {
         holders.remove(event.player.uniqueId)

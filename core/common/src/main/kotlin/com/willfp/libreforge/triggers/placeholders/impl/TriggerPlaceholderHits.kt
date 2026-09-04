@@ -2,7 +2,6 @@ package com.willfp.libreforge.triggers.placeholders.impl
 
 import com.willfp.libreforge.NamedValue
 import com.willfp.libreforge.integrations.paper.impl.TriggerTridentAttack
-import com.willfp.libreforge.plugin
 import com.willfp.libreforge.triggers.TriggerData
 import com.willfp.libreforge.triggers.event.TriggerDispatchEvent
 import com.willfp.libreforge.triggers.impl.TriggerBowAttack
@@ -13,9 +12,10 @@ import org.bukkit.entity.LivingEntity
 import org.bukkit.entity.Player
 import org.bukkit.event.EventHandler
 import java.util.UUID
+import java.util.concurrent.ConcurrentHashMap
 
 object TriggerPlaceholderHits : TriggerPlaceholder("hits") {
-    private const val HITS_META_KEY = "libreforge_tracked_hits"
+    private val hitsByEntity = ConcurrentHashMap<UUID, ConcurrentHashMap<UUID, Int>>()
 
     override fun createPlaceholders(data: TriggerData): Collection<NamedValue> {
         val victim = data.victim ?: return emptyList()
@@ -43,22 +43,26 @@ object TriggerPlaceholderHits : TriggerPlaceholder("hits") {
         val player = event.trigger.data.player ?: return
         val entity = event.trigger.data.victim ?: return
 
-        @Suppress("UNCHECKED_CAST")
-        val map = entity.getMetadata(HITS_META_KEY).firstOrNull()?.value() as? MutableMap<UUID, Int> ?: mutableMapOf()
+        val map = hitsByEntity.computeIfAbsent(entity.uniqueId) { ConcurrentHashMap() }
         val hits = entity.getHits(player)
         if (entity.health >= entity.getAttribute(Attribute.MAX_HEALTH)!!.value) {
+            map.clear()
             map[player.uniqueId] = 1
         } else {
             map[player.uniqueId] = hits + 1
         }
 
-        entity.removeMetadata(HITS_META_KEY, plugin)
-        entity.setMetadata(HITS_META_KEY, plugin.createMetadataValue(map))
     }
 
     private fun LivingEntity.getHits(player: Player): Int {
-        @Suppress("UNCHECKED_CAST")
-        val map = this.getMetadata(HITS_META_KEY).firstOrNull()?.value() as? MutableMap<UUID, Int> ?: mutableMapOf()
-        return map[player.uniqueId] ?: 0
+        return hitsByEntity[this.uniqueId]?.get(player.uniqueId) ?: 0
+    }
+
+    internal fun clearEntity(uuid: UUID) {
+        hitsByEntity.remove(uuid)
+    }
+
+    internal fun clearAll() {
+        hitsByEntity.clear()
     }
 }
