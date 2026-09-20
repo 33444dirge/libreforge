@@ -28,13 +28,14 @@ object ItemRefreshListener : Listener {
         )
         .build<UUID, Unit>()
 
-    @EventHandler(priority = EventPriority.LOWEST)
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     fun onItemPickup(event: EntityPickupItemEvent) {
-        if (!plugin.configYml.getBool("refresh.pickup.enabled")) {
+        val settings = refreshSettings
+        if (!settings.pickupEnabled) {
             return
         }
 
-        if (plugin.configYml.getBool("refresh.pickup.require-meta")) {
+        if (settings.pickupRequireMeta) {
             if (!event.item.itemStack.hasItemMeta()) {
                 return
             }

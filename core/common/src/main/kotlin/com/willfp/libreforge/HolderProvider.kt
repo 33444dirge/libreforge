@@ -287,7 +287,7 @@ private val holderCache = Caffeine.newBuilder()
     .build<UUID, Collection<ProvidedHolder>>()
 
 private fun Dispatcher<*>.computeHolders(): Collection<ProvidedHolder> {
-    if (this is EntityDispatcher && this.dispatcher !is Player && !plugin.configYml.getBool("refresh.entities.enabled")) {
+    if (this is EntityDispatcher && this.dispatcher !is Player && !refreshSettings.entitiesEnabled) {
         return emptyList()
     }
 

@@ -14,20 +14,9 @@ import org.bukkit.event.Listener
 import org.bukkit.event.entity.EntityDamageByEntityEvent
 import org.bukkit.event.entity.EntityShootBowEvent
 import org.bukkit.event.player.PlayerQuitEvent
-import com.destroystokyo.paper.event.player.PlayerAttackEntityCooldownResetEvent
-import java.lang.reflect.Method
+import io.papermc.paper.event.player.PrePlayerAttackEntityEvent
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
-
-private object AttackCooldownAccess {
-    val current: Method? = runCatching {
-        Player::class.java.getMethod("getCooledAttackStrength", Float::class.javaPrimitiveType)
-    }.getOrNull()
-
-    val legacy: Method? = runCatching {
-        Player::class.java.getMethod("getAttackCooldown")
-    }.getOrNull()
-}
 
 private data class PendingAttack(
     val target: UUID,
@@ -37,15 +26,14 @@ private data class PendingAttack(
 private val pendingAttacks = ConcurrentHashMap<UUID, PendingAttack>()
 
 internal object AttackCooldownSnapshot : Listener {
-    @EventHandler(priority = EventPriority.LOWEST)
-    fun onAttack(event: PlayerAttackEntityCooldownResetEvent) {
-        val snapshot = PendingAttack(
-            event.attackedEntity.uniqueId,
-            event.cooledAttackStrength.coerceIn(0f, 1f)
-        )
-        pendingAttacks[event.player.uniqueId] = snapshot
-        SchedulerHelper.runTaskLater(plugin, event.player, Runnable {
-            pendingAttacks.remove(event.player.uniqueId, snapshot)
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    fun onAttack(event: PrePlayerAttackEntityEvent) {
+        if (!event.willAttack()) return
+        val player = event.player
+        val snapshot = PendingAttack(event.attacked.uniqueId, player.getCooledAttackStrength(0.5f).coerceIn(0f, 1f))
+        pendingAttacks[player.uniqueId] = snapshot
+        SchedulerHelper.runTaskLater(plugin, player, Runnable {
+            pendingAttacks.remove(player.uniqueId, snapshot)
         }, 1)
     }
 
@@ -67,15 +55,7 @@ private fun Player.compatAttackCooldown(target: org.bukkit.entity.Entity? = null
         }
     }
 
-    val value = runCatching {
-        when {
-            AttackCooldownAccess.current != null -> AttackCooldownAccess.current.invoke(this, 0.5f)
-            AttackCooldownAccess.legacy != null -> AttackCooldownAccess.legacy.invoke(this)
-            else -> null
-        }
-    }.getOrNull()
-
-    return (value as? Number)?.toFloat()?.coerceIn(0f, 1f) ?: 1f
+    return getCooledAttackStrength(0.5f).coerceIn(0f, 1f)
 }
 
 object FilterFullyCharged : Filter<NoCompileData, Boolean>("fully_charged") {

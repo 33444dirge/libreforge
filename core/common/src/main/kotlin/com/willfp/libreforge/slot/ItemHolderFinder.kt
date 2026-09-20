@@ -7,7 +7,6 @@ import com.willfp.libreforge.HolderProvider
 import com.willfp.libreforge.TypedHolderProvider
 import com.willfp.libreforge.TypedProvidedHolder
 import com.willfp.libreforge.get
-import com.willfp.libreforge.ifType
 import com.willfp.libreforge.registerRefreshFunction
 import com.willfp.libreforge.slot.impl.NumericSlotType
 import org.bukkit.entity.LivingEntity
@@ -46,15 +45,23 @@ abstract class ItemHolderFinder<T : Holder> {
      * Find holders on an [entity] for a given [slot].
      */
     fun findHolders(entity: LivingEntity, slot: SlotType): List<TypedProvidedHolder<T>> {
-        val items = slot.getItems(entity)
-
-        val holders = items.flatMap { item ->
-            this.find(item)
-                .filter { holder -> isValidInSlot(holder, slot) }
-                .map { holder -> SlotItemProvidedHolder(holder, item, slot) }
-        }
-
+        val holders = ArrayList<TypedProvidedHolder<T>>()
+        appendHolders(entity, slot, holders)
         return holders
+    }
+
+    private fun appendHolders(
+        entity: LivingEntity,
+        slot: SlotType,
+        destination: MutableCollection<TypedProvidedHolder<T>>
+    ) {
+        for (item in slot.getItems(entity)) {
+            for (holder in find(item)) {
+                if (isValidInSlot(holder, slot)) {
+                    destination.add(SlotItemProvidedHolder(holder, item, slot))
+                }
+            }
+        }
     }
 
     /**
@@ -79,16 +86,21 @@ abstract class ItemHolderFinder<T : Holder> {
             cache.get(dispatcher.uuid)?.takeIf { it.expiresAt > now }?.let { return it.holders }
 
             val entity = dispatcher.get<LivingEntity>() ?: return emptyList()
-
-            val slots = SlotTypes.baseTypes.toMutableSet()
-
-            // Prevents double scanning of held item slot
-            dispatcher.ifType<Player> {
-                slots.remove(NumericSlotType(it.inventory.heldItemSlot))
-            }
+            val heldSlot = (entity as? Player)?.inventory?.heldItemSlot
+            val holders = ArrayList<TypedProvidedHolder<T>>()
 
             // Only check for non-combined slot types
-            val holders = slots.flatMap { slot -> findHolders(entity, slot) }
+            for (slot in SlotTypes.baseTypes) {
+                if (slot is NumericSlotType) {
+                    // Numeric inventory slots are empty for non-player entities. A player's
+                    // selected numeric slot is already represented by the main-hand slot.
+                    if (heldSlot == null || slot.slot == heldSlot) {
+                        continue
+                    }
+                }
+
+                appendHolders(entity, slot, holders)
+            }
 
             // The map is intentionally bounded: all entries naturally expire after 500ms, but a burst of unique
             // dispatchers must never retain an unbounded number of item-holder lists between cleanups.

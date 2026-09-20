@@ -8,7 +8,7 @@ import org.bukkit.entity.Player
 import org.bukkit.inventory.ItemStack
 
 class NumericSlotType(
-    private val slot: Int
+    internal val slot: Int
 ) : SlotType(slot.toString()) {
     private val slotList = slot.toSingletonList()
 
