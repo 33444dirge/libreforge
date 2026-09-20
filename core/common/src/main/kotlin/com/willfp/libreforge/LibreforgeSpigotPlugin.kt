@@ -135,6 +135,7 @@ class LibreforgeSpigotPlugin : EcoPlugin() {
 
     override fun handleEnable() {
         onDisable { clearAttackCooldownSnapshots() }
+        EntityRefreshListener.backfillLoadedEntities()
 
         if (this.configYml.getBool("show-libreforge-info")) {
             this.logger.info("")

@@ -437,9 +437,20 @@ val Dispatcher<*>.providedActiveEffects: List<ProvidedEffectBlock>
  */
 fun Dispatcher<*>.updateEffects() {
     val before = this.providedActiveEffects
-    val after = this.calculateActiveEffects()
+    val currentHolders = this.holders
 
-    previousStates[this.uuid] = after
+    if (before.isEmpty() && currentHolders.isEmpty()) {
+        previousStates.remove(this.uuid)
+        return
+    }
+
+    val after = currentHolders.getProvidedActiveEffects(this)
+
+    if (after.isEmpty()) {
+        previousStates.remove(this.uuid)
+    } else {
+        previousStates[this.uuid] = after
+    }
 
     if (before == after) {
         // calculateActiveEffects() already returns a sorted list. Avoid building two

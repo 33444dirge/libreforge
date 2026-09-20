@@ -2,6 +2,8 @@ package com.willfp.libreforge
 
 import com.destroystokyo.paper.event.entity.EntityAddToWorldEvent
 import com.destroystokyo.paper.event.entity.EntityRemoveFromWorldEvent
+import org.bukkit.Bukkit
+import org.bukkit.Location
 import org.bukkit.Registry
 import org.bukkit.attribute.AttributeInstance
 import org.bukkit.entity.LivingEntity
@@ -45,6 +47,28 @@ object EntityRefreshListener : Listener {
             return
         }
         trackedEntities[entity.uniqueId] = WeakReference(entity)
+    }
+
+    internal fun backfillLoadedEntities() {
+        for (world in Bukkit.getWorlds()) {
+            for (chunk in world.loadedChunks) {
+                val chunkX = chunk.x
+                val chunkZ = chunk.z
+                val location = Location(world, (chunkX shl 4).toDouble(), 0.0, (chunkZ shl 4).toDouble())
+
+                SchedulerHelper.runTask(plugin, location) {
+                    if (!world.isChunkLoaded(chunkX, chunkZ)) {
+                        return@runTask
+                    }
+
+                    for (entity in world.getChunkAt(chunkX, chunkZ).entities) {
+                        if (entity is LivingEntity && entity !is Player) {
+                            track(entity)
+                        }
+                    }
+                }
+            }
+        }
     }
 
     internal fun pollTrackedEntities() {
