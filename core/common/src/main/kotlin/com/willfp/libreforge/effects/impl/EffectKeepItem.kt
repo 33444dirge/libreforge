@@ -6,7 +6,6 @@ import com.willfp.eco.core.data.keys.PersistentDataKey
 import com.willfp.eco.core.data.keys.PersistentDataKeyType
 import com.willfp.eco.core.data.profile
 import com.willfp.eco.core.items.Items
-import com.willfp.eco.core.map.listMap
 import com.willfp.libreforge.ArgType
 import com.willfp.libreforge.Dispatcher
 import com.willfp.libreforge.NoCompileData
@@ -24,6 +23,7 @@ import org.bukkit.event.player.PlayerJoinEvent
 import org.bukkit.event.player.PlayerRespawnEvent
 import org.bukkit.inventory.ItemStack
 import java.util.UUID
+import java.util.concurrent.ConcurrentHashMap
 
 object EffectKeepItem : Effect<NoCompileData>("keep_item") {
     override val description = "Keeps an item in the player's inventory when they die, instead of it being dropped."
@@ -37,7 +37,7 @@ object EffectKeepItem : Effect<NoCompileData>("keep_item") {
         )
     }
 
-    private val players = listMap<UUID, Triple<UUID, Config, ItemStack?>>()
+    private val players = ConcurrentHashMap<UUID, List<Triple<UUID, Config, ItemStack?>>>()
 
     private val savedItemsKey by lazy {
         PersistentDataKey(
@@ -54,13 +54,14 @@ object EffectKeepItem : Effect<NoCompileData>("keep_item") {
         holder: ProvidedHolder,
         compileData: NoCompileData
     ) {
-        players[dispatcher.uuid].add(Triple(identifiers.uuid, config, (holder.provider as? ItemStack)?.clone()))
+        players.compute(dispatcher.uuid) { _, active ->
+            active.orEmpty() + Triple(identifiers.uuid, config, (holder.provider as? ItemStack)?.clone())
+        }
     }
 
     override fun onDisable(dispatcher: Dispatcher<*>, identifiers: Identifiers, holder: ProvidedHolder) {
         players.computeIfPresent(dispatcher.uuid) { _, active ->
-            active.removeAll { it.first == identifiers.uuid }
-            active.takeIf { it.isNotEmpty() }
+            active.filterNot { it.first == identifiers.uuid }.takeIf { it.isNotEmpty() }
         }
     }
 
@@ -69,7 +70,7 @@ object EffectKeepItem : Effect<NoCompileData>("keep_item") {
         val player = event.player
         val newEntries = mutableListOf<String>()
 
-        for ((_, config, providedItem) in players[player.uniqueId]) {
+        for ((_, config, providedItem) in players[player.uniqueId].orEmpty()) {
             val slotName = config.getString("slot")
 
             val slots = if (slotName.isNotEmpty()) {

@@ -12,12 +12,15 @@ abstract class NativeConfigCategory(
 
     abstract fun acceptConfig(plugin: EcoPlugin, id: String, config: Config)
 
-    internal fun reload(plugin: EcoPlugin) {
+    internal open fun replaceConfigs(plugin: EcoPlugin, configs: Collection<IdentifiedConfig>) {
         this.clear(plugin)
-
-        for (config in this.fetchConfigs(plugin)) {
+        for (config in configs) {
             this.acceptConfig(plugin, config.id, config.config)
         }
+    }
+
+    internal fun reload(plugin: EcoPlugin) {
+        this.replaceConfigs(plugin, this.fetchConfigs(plugin))
     }
 
     internal fun copyConfigs(plugin: EcoPlugin) {

@@ -35,7 +35,7 @@ object EffectGivePoints : Effect<NoCompileData>("give_points") {
 
     override fun onTrigger(config: Config, data: TriggerData, compileData: NoCompileData): Boolean {
         val player = data.player ?: return false
-        player.points[config.getString("type")] += config.getDoubleFromExpression("amount", data)
+        player.points.add(config.getString("type"), config.getDoubleFromExpression("amount", data))
 
         return true
     }

@@ -37,7 +37,7 @@ object EffectMultiplyPoints : Effect<NoCompileData>("multiply_points") {
         val player = data.player ?: return false
         val type = config.getString("type")
 
-        player.points[type] *= config.getDoubleFromExpression("multiplier", data)
+        player.points.multiply(type, config.getDoubleFromExpression("multiplier", data))
 
         return true
     }

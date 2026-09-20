@@ -36,10 +36,15 @@ object EffectSortInventory : Effect<NoCompileData>("sort_inventory") {
             else -> return false
         }
 
-        val sorted = slots.map { player.inventory.getItem(it) }
+        val original = slots.map { player.inventory.getItem(it) }
+        val sorted = original
             .sortedWith(compareBy({ it?.type?.name ?: "￿" }, { -(it?.amount ?: 0) }))
 
-        slots.zip(sorted).forEach { (slot, item) -> player.inventory.setItem(slot, item) }
+        slots.zip(sorted).forEachIndexed { index, (slot, item) ->
+            if (original[index] != item) {
+                player.inventory.setItem(slot, item)
+            }
+        }
 
         return true
     }

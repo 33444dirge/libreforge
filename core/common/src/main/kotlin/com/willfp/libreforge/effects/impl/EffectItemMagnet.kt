@@ -16,6 +16,7 @@ import com.willfp.libreforge.getDoubleFromExpression
 import com.willfp.libreforge.getOrNull
 import com.willfp.libreforge.plugin
 import org.bukkit.entity.Item
+import java.util.concurrent.ConcurrentHashMap
 
 object EffectItemMagnet : Effect<EffectItemMagnet.ItemMagnetFilter>("item_magnet") {
     override val description = "Pulls nearby dropped items toward the holder while active, optionally restricted to specific item types."
@@ -48,7 +49,7 @@ object EffectItemMagnet : Effect<EffectItemMagnet.ItemMagnetFilter>("item_magnet
         )
     }
 
-    private val tasks = mutableMapOf<Identifiers, RunnableTask>()
+    private val tasks = ConcurrentHashMap<Identifiers, RunnableTask>()
 
     override fun onEnable(
         dispatcher: Dispatcher<*>,

@@ -17,10 +17,13 @@ import org.bukkit.event.player.PlayerItemHeldEvent
 import org.bukkit.event.player.PlayerJoinEvent
 import org.bukkit.event.player.PlayerRespawnEvent
 import java.util.UUID
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
 
 @Suppress("unused", "UNUSED_PARAMETER")
 object ItemRefreshListener : Listener {
+    private val pendingPickupRefreshes = ConcurrentHashMap.newKeySet<UUID>()
+
     private val inventoryClickTimeouts = Caffeine.newBuilder()
         .expireAfterWrite(
             plugin.configYml.getInt("refresh.inventory-click.timeout").toLong(),
@@ -42,10 +45,29 @@ object ItemRefreshListener : Listener {
         }
 
         val entity = event.entity
-        val dispatcher = entity.toDispatcher()
-        SchedulerHelper.runTask(plugin, entity) {
-            dispatcher.refreshHolders()
+        if (!pendingPickupRefreshes.add(entity.uniqueId)) {
+            return
         }
+
+        val dispatcher = entity.toDispatcher()
+        try {
+            SchedulerHelper.runTaskForEntity(
+                plugin,
+                entity,
+                Runnable {
+                    pendingPickupRefreshes.remove(entity.uniqueId)
+                    dispatcher.refreshHolders()
+                },
+                Runnable { pendingPickupRefreshes.remove(entity.uniqueId) }
+            )
+        } catch (exception: RuntimeException) {
+            pendingPickupRefreshes.remove(entity.uniqueId)
+            throw exception
+        }
+    }
+
+    internal fun clearPendingPickupRefreshes() {
+        pendingPickupRefreshes.clear()
     }
 
     @EventHandler(priority = EventPriority.LOWEST)

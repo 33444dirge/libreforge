@@ -17,7 +17,7 @@ object EffectFlight : Effect<NoCompileData>("flight") {
 
     override val shouldReload = false
 
-    private val players = ConcurrentHashMap<UUID, MutableList<UUID>>()
+    private val players = ConcurrentHashMap<UUID, List<UUID>>()
 
     override fun onEnable(
         dispatcher: Dispatcher<*>,
@@ -28,7 +28,7 @@ object EffectFlight : Effect<NoCompileData>("flight") {
     ) {
         val player = dispatcher.get<Player>() ?: return
 
-        players.computeIfAbsent(player.uniqueId) { mutableListOf() }.add(identifiers.uuid)
+        players.compute(player.uniqueId) { _, active -> active.orEmpty() + identifiers.uuid }
         player.allowFlight = players[player.uniqueId]?.isNotEmpty() ?: false
     }
 
@@ -36,8 +36,7 @@ object EffectFlight : Effect<NoCompileData>("flight") {
         val player = dispatcher.get<Player>() ?: return
 
         players.computeIfPresent(player.uniqueId) { _, active ->
-            active.remove(identifiers.uuid)
-            active.takeIf { it.isNotEmpty() }
+            (active - identifiers.uuid).takeIf { it.isNotEmpty() }
         }
         player.allowFlight = players[player.uniqueId]?.isNotEmpty() ?: false
     }

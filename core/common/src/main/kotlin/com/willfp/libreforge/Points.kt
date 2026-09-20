@@ -43,11 +43,11 @@ class PointPriceFactory(private val type: String) : PriceFactory {
         }
 
         override fun pay(player: Player, multiplier: Double) {
-            player.points[type] -= getValue(player, multiplier)
+            player.points.add(type, -getValue(player, multiplier))
         }
 
         override fun giveTo(player: Player, multiplier: Double) {
-            player.points[type] += getValue(player, multiplier)
+            player.points.add(type, getValue(player, multiplier))
         }
 
         override fun getValue(player: Player, multiplier: Double): Double {
@@ -68,7 +68,7 @@ class PointPriceFactory(private val type: String) : PriceFactory {
     }
 }
 
-private val initializedPoints = mutableSetOf<String>()
+private val initializedPoints = ConcurrentHashMap.newKeySet<String>()
 
 class PointsMap(
     private val profile: Profile
@@ -88,28 +88,41 @@ class PointsMap(
     }
 
     private fun initializeIfNeeded(type: String) {
-        if (type in initializedPoints) {
-            return
+        if (initializedPoints.add(type)) {
+            Prices.registerPriceFactory(PointPriceFactory(type))
         }
-
-        initializedPoints += type
-        Prices.registerPriceFactory(PointPriceFactory(type))
     }
 
     operator fun get(key: String): Double {
         initializeIfNeeded(key)
 
-        return profile.read(getKey(key))
+        return synchronized(profile) {
+            profile.read(getKey(key))
+        }
     }
 
     fun add(key: String, amount: Double) {
-        set(key, get(key) + amount)
+        update(key) { it + amount }
+    }
+
+    fun multiply(key: String, multiplier: Double) {
+        update(key) { it * multiplier }
+    }
+
+    private fun update(key: String, transform: (Double) -> Double) {
+        initializeIfNeeded(key)
+        val dataKey = getKey(key)
+        synchronized(profile) {
+            profile.write(dataKey, transform(profile.read(dataKey)))
+        }
     }
 
     operator fun set(key: String, value: Double) {
         initializeIfNeeded(key)
 
-        profile.write(getKey(key), value)
+        synchronized(profile) {
+            profile.write(getKey(key), value)
+        }
     }
 
     override fun toString(): String {

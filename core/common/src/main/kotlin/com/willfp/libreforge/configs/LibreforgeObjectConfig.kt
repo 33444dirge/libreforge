@@ -5,7 +5,9 @@ import com.willfp.eco.core.config.config
 import com.willfp.eco.core.config.interfaces.Config
 import com.willfp.eco.core.config.readConfig
 import com.willfp.eco.core.registry.Registrable
+import com.willfp.libreforge.SchedulerHelper
 import com.willfp.libreforge.plugin
+import org.bukkit.command.CommandSender
 import java.net.URI
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
@@ -19,11 +21,36 @@ private val executor = Executors.newSingleThreadExecutor { runnable ->
 
 internal fun <T> onLrcdbThread(action: () -> T): Future<T> = executor.submit(action)
 
+internal fun <T> onLrcdbThread(
+    sender: CommandSender,
+    action: () -> T,
+    complete: (CommandSender, Result<T>) -> Unit
+) {
+    val future = onLrcdbThread(action)
+
+    fun pollFromOwner() {
+        SchedulerHelper.runTaskLater(plugin, sender, Runnable {
+            if (future.isDone) {
+                complete(sender, runCatching { future.get() })
+            } else {
+                pollFromOwner()
+            }
+        }, 1)
+    }
+
+    pollFromOwner()
+}
+
 internal fun shutdownLrcdbThread() {
     executor.shutdownNow()
 }
 
 private val client = HttpClient.newBuilder().build()
+
+internal data class PreparedExport(
+    val request: HttpRequest?,
+    val immediateResponse: ExportResponse?
+)
 
 data class LibreforgeObjectConfig(
     val config: Config,
@@ -31,14 +58,17 @@ data class LibreforgeObjectConfig(
     val name: String,
     val category: LibreforgeConfigCategory
 ) : Registrable {
-    fun share(private: Boolean): ExportResponse {
+    internal fun prepareShare(private: Boolean): PreparedExport {
         if (!category.supportsSharing) {
-            return ExportResponse(
-                false,
-                400,
-                config {
-                    "message" to "Configs in this category cannot be shared"
-                }
+            return PreparedExport(
+                null,
+                ExportResponse(
+                    false,
+                    400,
+                    config {
+                        "message" to "Configs in this category cannot be shared"
+                    }
+                )
             )
         }
 
@@ -52,11 +82,19 @@ data class LibreforgeObjectConfig(
             "isPrivate" to private
         }.toPlaintext()
 
-        val request = HttpRequest.newBuilder()
+        return PreparedExport(
+            HttpRequest.newBuilder()
             .uri(URI.create("https://lrcdb.auxilor.io/api/v2/configs"))
             .header("Content-Type", "application/json")
             .POST(HttpRequest.BodyPublishers.ofString(body))
-            .build()
+            .build(),
+            null
+        )
+    }
+
+    internal fun executeShare(prepared: PreparedExport): ExportResponse {
+        prepared.immediateResponse?.let { return it }
+        val request = prepared.request ?: error("Prepared export has no request or response")
 
         val res = try {
             client.send(request, HttpResponse.BodyHandlers.ofString())
@@ -82,14 +120,15 @@ data class LibreforgeObjectConfig(
         )
     }
 
+    fun share(private: Boolean): ExportResponse = executeShare(prepareShare(private))
+
     override fun onRegister() {
         if (!plugin.configYml.getBool("lrcdb.share-configs.enabled")) {
             return
         }
 
-        onLrcdbThread {
-            share(!plugin.configYml.getBool("lrcdb.share-configs.publicly"))
-        }
+        val prepared = prepareShare(!plugin.configYml.getBool("lrcdb.share-configs.publicly"))
+        onLrcdbThread { executeShare(prepared) }
     }
 
     override fun getID(): String {

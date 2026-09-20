@@ -5,6 +5,7 @@ import com.willfp.libreforge.ArgType
 import com.willfp.libreforge.NoCompileData
 import com.willfp.libreforge.arguments
 import com.willfp.libreforge.effects.Effect
+import com.willfp.libreforge.isEcoEmpty
 import com.willfp.libreforge.triggers.TriggerData
 import com.willfp.libreforge.triggers.TriggerParameter
 
@@ -30,10 +31,18 @@ object EffectClearInventory : Effect<NoCompileData>("clear_inventory") {
         val player = data.player ?: return false
 
         when (config.getString("type").lowercase()) {
-            "all" -> player.inventory.clear()
-            "hotbar" -> (0..8).forEach { player.inventory.setItem(it, null) }
-            "main" -> (9..35).forEach { player.inventory.setItem(it, null) }
-            "armor" -> player.inventory.armorContents = arrayOfNulls(4)
+            "all" -> (0 until player.inventory.size).forEach {
+                if (!player.inventory.getItem(it).isEcoEmpty) player.inventory.setItem(it, null)
+            }
+            "hotbar" -> (0..8).forEach {
+                if (!player.inventory.getItem(it).isEcoEmpty) player.inventory.setItem(it, null)
+            }
+            "main" -> (9..35).forEach {
+                if (!player.inventory.getItem(it).isEcoEmpty) player.inventory.setItem(it, null)
+            }
+            "armor" -> if (player.inventory.armorContents.any { !it.isEcoEmpty }) {
+                player.inventory.armorContents = arrayOfNulls(4)
+            }
             else -> return false
         }
 

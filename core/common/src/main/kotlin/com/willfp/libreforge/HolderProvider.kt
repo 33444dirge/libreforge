@@ -109,38 +109,50 @@ data class ProvidedEffectBlock(
     }
 }
 
-private val providers = CopyOnWriteArrayList<HolderProvider>()
+private data class OwnedRegistration<T>(
+    val owner: ClassLoader,
+    val value: T
+)
+
+private val providers = CopyOnWriteArrayList<OwnedRegistration<HolderProvider>>()
+
+@PublishedApi
+internal fun registerHolderProviderOwnedBy(provider: HolderProvider, owner: ClassLoader): Boolean =
+    providers.add(OwnedRegistration(owner, provider))
 
 /**
  * Register a new holder provider.
  */
-fun registerHolderProvider(provider: HolderProvider) = providers.add(provider)
+fun registerHolderProvider(provider: HolderProvider) =
+    registerHolderProviderOwnedBy(provider, provider.javaClass.classLoader)
 
 /**
  * Unregister a holder provider that is no longer active.
  */
-fun unregisterHolderProvider(provider: HolderProvider) = providers.remove(provider)
+fun unregisterHolderProvider(provider: HolderProvider) = providers.removeIf { it.value == provider }
 
 /**
  * Release providers registered by a dependent plugin when that plugin is disabled.
  */
 internal fun unregisterHolderProvidersOwnedBy(classLoader: ClassLoader) {
-    providers.removeIf { it.javaClass.classLoader === classLoader }
+    providers.removeIf { it.owner === classLoader }
+    refreshFunctions.removeIf { it.owner === classLoader }
+    holderPlaceholderProviders.removeIf { it.owner === classLoader }
 }
 
 /**
  * Register a new holder provider for all possible dispatchers.
  */
 fun registerGenericHolderProvider(provider: (Dispatcher<*>) -> Collection<ProvidedHolder>) =
-    registerHolderProvider(object : HolderProvider {
+    registerHolderProviderOwnedBy(object : HolderProvider {
         override fun provide(dispatcher: Dispatcher<*>) = provider(dispatcher)
-    })
+    }, provider.javaClass.classLoader)
 
 /**
  * Register a new holder provider for a specific type of dispatcher.
  */
-inline fun <reified T> registerSpecificHolderProvider(crossinline provider: (T) -> Collection<ProvidedHolder>) =
-    registerHolderProvider(object : HolderProvider {
+inline fun <reified T> registerSpecificHolderProvider(noinline provider: (T) -> Collection<ProvidedHolder>) =
+    registerHolderProviderOwnedBy(object : HolderProvider {
         override fun provide(dispatcher: Dispatcher<*>): Collection<ProvidedHolder> {
             return if (dispatcher.isType<T>()) {
                 provider(dispatcher.get<T>()!!)
@@ -148,29 +160,34 @@ inline fun <reified T> registerSpecificHolderProvider(crossinline provider: (T) 
                 emptyList()
             }
         }
-    })
+    }, provider.javaClass.classLoader)
 
 fun registerSlotHolderFinderAsProvider(finder: ItemHolderFinder<*>) =
-    registerHolderProvider(finder.toHolderProvider())
+    registerHolderProviderOwnedBy(finder.toHolderProvider(), finder.javaClass.classLoader)
 
-private val refreshFunctions = mutableListOf<(Dispatcher<*>) -> Unit>()
+private val refreshFunctions = CopyOnWriteArrayList<OwnedRegistration<(Dispatcher<*>) -> Unit>>()
+
+@PublishedApi
+internal fun registerRefreshFunctionOwnedBy(function: (Dispatcher<*>) -> Unit, owner: ClassLoader) {
+    refreshFunctions += OwnedRegistration(owner, function)
+}
 
 /**
  * Register a function to be called when a dispatcher's holders are refreshed.
  */
 fun registerRefreshFunction(function: (Dispatcher<*>) -> Unit) {
-    refreshFunctions += function
+    registerRefreshFunctionOwnedBy(function, function.javaClass.classLoader)
 }
 
 /**
  * Register a function to be called when a dispatcher's holders are refreshed for a specific dispatcher.
  */
-inline fun <reified T> registerSpecificRefreshFunction(crossinline function: (T) -> Unit) {
-    registerRefreshFunction {
+inline fun <reified T> registerSpecificRefreshFunction(noinline function: (T) -> Unit) {
+    registerRefreshFunctionOwnedBy({
         it.get<T>()?.let { t ->
             function(t)
         }
-    }
+    }, function.javaClass.classLoader)
 }
 
 private val holderCooldown: Cache<UUID, Unit>? =
@@ -208,7 +225,7 @@ fun Dispatcher<*>.forceRefreshHolders() {
  * Forcibly recalculate holders without reloading active permanent effects.
  */
 internal fun Dispatcher<*>.forceCalculateHolders(): Collection<ProvidedHolder> {
-    refreshFunctions.forEach { it(this) }
+    refreshFunctions.forEach { it.value(this) }
     return this.computeHolders().also {
         // Pre-populate cache so later holder lookups get a hit.
         holderCache.put(this.uuid, it)
@@ -225,45 +242,54 @@ internal fun Dispatcher<*>.forceCalculateHolders(): Collection<ProvidedHolder> {
  * or [forceRefreshHolders] which explicitly invalidate the cache.
  */
 internal fun Dispatcher<*>.pollEffects() {
-    refreshFunctions.forEach { it(this) }
+    refreshFunctions.forEach { it.value(this) }
     this.updateEffects()
 }
 
-private val holderPlaceholderProviders = mutableListOf<(ProvidedHolder, Dispatcher<*>) -> Collection<NamedValue>>()
+private val holderPlaceholderProviders =
+    CopyOnWriteArrayList<OwnedRegistration<(ProvidedHolder, Dispatcher<*>) -> Collection<NamedValue>>>()
+
+@PublishedApi
+internal fun registerPlaceholderProviderOwnedBy(
+    provider: (ProvidedHolder, Dispatcher<*>) -> Collection<NamedValue>,
+    owner: ClassLoader
+) {
+    holderPlaceholderProviders += OwnedRegistration(owner, provider)
+}
 
 /**
  * Register a function to generate placeholders for a holder.
  */
 fun registerPlaceholderProvider(provider: (ProvidedHolder, Dispatcher<*>) -> Collection<NamedValue>) {
-    holderPlaceholderProviders += provider
+    registerPlaceholderProviderOwnedBy(provider, provider.javaClass.classLoader)
 }
 
 /**
  * Register a function to generate placeholders for a holder for any dispatcher.
  */
-inline fun <reified T : Holder> registerHolderPlaceholderProvider(crossinline provider: (T, Dispatcher<*>) -> Collection<NamedValue>) {
-    registerPlaceholderProvider { provided, dispatcher ->
+inline fun <reified T : Holder> registerHolderPlaceholderProvider(noinline provider: (T, Dispatcher<*>) -> Collection<NamedValue>) {
+    registerPlaceholderProviderOwnedBy({ provided, dispatcher ->
         val holder = provided.holder
         if (holder is T) {
             provider(holder, dispatcher)
         } else {
             emptyList()
         }
-    }
+    }, provider.javaClass.classLoader)
 }
 
 /**
  * Register a function to generate placeholders for a holder for a specific dispatcher.
  */
-inline fun <reified T : Holder, reified R> registerSpecificHolderPlaceholderProvider(crossinline provider: (T, R) -> Collection<NamedValue>) {
-    registerPlaceholderProvider { provided, dispatcher ->
+inline fun <reified T : Holder, reified R> registerSpecificHolderPlaceholderProvider(noinline provider: (T, R) -> Collection<NamedValue>) {
+    registerPlaceholderProviderOwnedBy({ provided, dispatcher ->
         val holder = provided.holder
         if (holder is T && dispatcher.isType<R>()) {
             provider(holder, dispatcher.get<R>()!!)
         } else {
             emptyList()
         }
-    }
+    }, provider.javaClass.classLoader)
 }
 
 /**
@@ -272,7 +298,7 @@ inline fun <reified T : Holder, reified R> registerSpecificHolderPlaceholderProv
 fun ProvidedHolder.generatePlaceholders(dispatcher: Dispatcher<*>): List<NamedValue> {
     return buildList {
         for (provider in holderPlaceholderProviders) {
-            addAll(provider(this@generatePlaceholders, dispatcher))
+            addAll(provider.value(this@generatePlaceholders, dispatcher))
         }
     }
 }
@@ -291,7 +317,7 @@ private fun Dispatcher<*>.computeHolders(): Collection<ProvidedHolder> {
         return emptyList()
     }
 
-    val holders = providers.flatMap { it.provide(this) }
+    val holders = providers.flatMap { it.value.provide(this) }
 
     val old = previousHolders.getIfPresent(this.uuid) ?: emptyList()
 
@@ -350,10 +376,14 @@ internal fun Dispatcher<*>.purgePreviousHolders() {
     previousStates.remove(this.uuid)
 }
 
-internal fun clearAllHolderCaches() {
+internal fun invalidateAllHolderCaches() {
     holderCooldown?.invalidateAll()
     holderCache.invalidateAll()
     previousHolders.invalidateAll()
+}
+
+internal fun clearAllHolderState() {
+    invalidateAllHolderCaches()
     previousStates.clear()
 }
 
@@ -410,6 +440,19 @@ fun Dispatcher<*>.updateEffects() {
     val after = this.calculateActiveEffects()
 
     previousStates[this.uuid] = after
+
+    if (before == after) {
+        // calculateActiveEffects() already returns a sorted list. Avoid building two
+        // multiset-difference maps when every permanent effect is only being reloaded.
+        for ((effect, holder) in after) {
+            effect.disable(this, holder, isReload = true)
+        }
+
+        for ((effect, holder) in after) {
+            effect.enable(this, holder, isReload = true)
+        }
+        return
+    }
 
     // Permanent effects also have a run order, so we need to sort them.
     val added = (after without before).sorted()

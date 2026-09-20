@@ -30,7 +30,7 @@ class EffectGivePermission(
         )
     }
 
-    private val permissions = ConcurrentHashMap<UUID, MutableList<GivenPermission>>()
+    private val permissions = ConcurrentHashMap<UUID, List<GivenPermission>>()
 
     override fun onEnable(
         dispatcher: Dispatcher<*>,
@@ -48,7 +48,9 @@ class EffectGivePermission(
 
         val permission = config.getString("permission")
 
-        permissions.computeIfAbsent(dispatcher.uuid) { mutableListOf() }.add(GivenPermission(permission, identifiers.uuid))
+        permissions.compute(dispatcher.uuid) { _, active ->
+            active.orEmpty() + GivenPermission(permission, identifiers.uuid)
+        }
         handler.playerAdd(player, permission)
     }
 
@@ -59,8 +61,7 @@ class EffectGivePermission(
             ?.firstOrNull { it.uuid == identifiers.uuid } ?: return
 
         permissions.computeIfPresent(dispatcher.uuid) { _, active ->
-            active.remove(permission)
-            active.takeIf { it.isNotEmpty() }
+            (active - permission).takeIf { it.isNotEmpty() }
         }
 
         // Remove the permission only if no other effect is giving it

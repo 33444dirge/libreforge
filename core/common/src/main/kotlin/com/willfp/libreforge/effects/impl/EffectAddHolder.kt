@@ -50,7 +50,7 @@ object EffectAddHolder : Effect<HolderTemplate>("add_holder") {
         )
     }
 
-    private val holders = ConcurrentHashMap<UUID, MutableList<Holder>>()
+    private val holders = ConcurrentHashMap<UUID, List<Holder>>()
 
     init {
         registerGenericHolderProvider {
@@ -63,21 +63,19 @@ object EffectAddHolder : Effect<HolderTemplate>("add_holder") {
         val duration = config.getIntFromExpression("duration", data).coerceAtLeast(1)
         val holder = compileData.toHolder().nest(data.holder)
 
-        holders.getOrPut(dispatcher.uuid) { mutableListOf() }.add(holder)
+        holders.compute(dispatcher.uuid) { _, active -> active.orEmpty() + holder }
 
         val location = dispatcher.location
         if (location != null) {
             SchedulerHelper.runTaskLater(plugin, location, {
-                holders[dispatcher.uuid]?.remove(holder)
-                if (holders[dispatcher.uuid].isNullOrEmpty()) {
-                    holders.remove(dispatcher.uuid)
+                holders.computeIfPresent(dispatcher.uuid) { _, active ->
+                    (active - holder).takeIf { it.isNotEmpty() }
                 }
             }, duration.toLong())
         } else {
             plugin.scheduler.runLater(duration.toLong()) {
-                holders[dispatcher.uuid]?.remove(holder)
-                if (holders[dispatcher.uuid].isNullOrEmpty()) {
-                    holders.remove(dispatcher.uuid)
+                holders.computeIfPresent(dispatcher.uuid) { _, active ->
+                    (active - holder).takeIf { it.isNotEmpty() }
                 }
             }
         }

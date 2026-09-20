@@ -17,7 +17,7 @@ import java.util.concurrent.ConcurrentHashMap
 object EffectAntigravityProjectile : Effect<NoCompileData>("antigravity_projectile") {
     override val description = "Makes all projectiles the player fires travel in a straight line, unaffected by gravity."
     override val categories = setOf("combat")
-    private val players = ConcurrentHashMap<UUID, MutableList<UUID>>()
+    private val players = ConcurrentHashMap<UUID, List<UUID>>()
 
     override fun onEnable(
         dispatcher: Dispatcher<*>,
@@ -26,13 +26,12 @@ object EffectAntigravityProjectile : Effect<NoCompileData>("antigravity_projecti
         holder: ProvidedHolder,
         compileData: NoCompileData
     ) {
-        players.computeIfAbsent(dispatcher.uuid) { mutableListOf() }.add(identifiers.uuid)
+        players.compute(dispatcher.uuid) { _, active -> active.orEmpty() + identifiers.uuid }
     }
 
     override fun onDisable(dispatcher: Dispatcher<*>, identifiers: Identifiers, holder: ProvidedHolder) {
         players.computeIfPresent(dispatcher.uuid) { _, active ->
-            active.remove(identifiers.uuid)
-            active.takeIf { it.isNotEmpty() }
+            (active - identifiers.uuid).takeIf { it.isNotEmpty() }
         }
     }
 

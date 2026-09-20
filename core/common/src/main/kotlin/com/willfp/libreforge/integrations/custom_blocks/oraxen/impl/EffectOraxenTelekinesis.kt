@@ -24,7 +24,7 @@ object EffectOraxenTelekinesis : Effect<NoCompileData>("telekinesis") {
     override val description = "Causes Oraxen block and furniture drops to go directly into the player's inventory instead of dropping on the ground."
     override val categories = setOf("inventory")
 
-    private val players = ConcurrentHashMap<UUID, MutableList<UUID>>()
+    private val players = ConcurrentHashMap<UUID, List<UUID>>()
 
     override fun onEnable(
         dispatcher: Dispatcher<*>,
@@ -33,13 +33,12 @@ object EffectOraxenTelekinesis : Effect<NoCompileData>("telekinesis") {
         holder: ProvidedHolder,
         compileData: NoCompileData
     ) {
-        players.computeIfAbsent(dispatcher.uuid) { mutableListOf() }.add(identifiers.uuid)
+        players.compute(dispatcher.uuid) { _, active -> active.orEmpty() + identifiers.uuid }
     }
 
     override fun onDisable(dispatcher: Dispatcher<*>, identifiers: Identifiers, holder: ProvidedHolder) {
         players.computeIfPresent(dispatcher.uuid) { _, active ->
-            active.remove(identifiers.uuid)
-            active.takeIf { it.isNotEmpty() }
+            (active - identifiers.uuid).takeIf { it.isNotEmpty() }
         }
     }
 

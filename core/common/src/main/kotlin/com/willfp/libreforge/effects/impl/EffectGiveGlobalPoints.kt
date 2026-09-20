@@ -31,7 +31,7 @@ object EffectGiveGlobalPoints : Effect<NoCompileData>("give_global_points") {
     }
 
     override fun onTrigger(config: Config, data: TriggerData, compileData: NoCompileData): Boolean {
-        globalPoints[config.getString("type")] += config.getDoubleFromExpression("amount", data)
+        globalPoints.add(config.getString("type"), config.getDoubleFromExpression("amount", data))
 
         return true
     }
