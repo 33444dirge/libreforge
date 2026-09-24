@@ -15,7 +15,7 @@ object EffectKeepLevel : Effect<NoCompileData>("keep_level") {
     override val description = "Prevents the player from losing their XP levels on death."
     override val categories = setOf("economy", "player")
 
-    private val players = ConcurrentHashMap<UUID, MutableList<UUID>>()
+    private val players = ConcurrentHashMap<UUID, List<UUID>>()
 
     override fun onEnable(
         dispatcher: Dispatcher<*>,
@@ -24,13 +24,12 @@ object EffectKeepLevel : Effect<NoCompileData>("keep_level") {
         holder: ProvidedHolder,
         compileData: NoCompileData
     ) {
-        players.computeIfAbsent(dispatcher.uuid) { mutableListOf() }.add(identifiers.uuid)
+        players.compute(dispatcher.uuid) { _, active -> active.orEmpty() + identifiers.uuid }
     }
 
     override fun onDisable(dispatcher: Dispatcher<*>, identifiers: Identifiers, holder: ProvidedHolder) {
         players.computeIfPresent(dispatcher.uuid) { _, active ->
-            active.remove(identifiers.uuid)
-            active.takeIf { it.isNotEmpty() }
+            (active - identifiers.uuid).takeIf { it.isNotEmpty() }
         }
     }
 

@@ -3,7 +3,6 @@ package com.willfp.libreforge.integrations.custom_blocks.itemsadder.impl
 import com.willfp.eco.core.config.interfaces.Config
 import com.willfp.eco.core.drops.DropQueue
 import com.willfp.eco.core.integrations.antigrief.AntigriefManager
-import com.willfp.eco.core.map.listMap
 import com.willfp.eco.util.TelekinesisUtils
 import com.willfp.libreforge.Dispatcher
 import com.willfp.libreforge.NoCompileData
@@ -26,7 +25,7 @@ object EffectItemsAdderTelekinesis : Effect<NoCompileData>("telekinesis") {
     override val description = "Causes ItemsAdder custom block drops to go directly into the player's inventory instead of dropping on the ground."
     override val categories = setOf("inventory")
 
-    private val players = listMap<UUID, UUID>()
+    private val players = ConcurrentHashMap<UUID, List<UUID>>()
 
     private val pendingLocations = ConcurrentHashMap<Location, UUID>()
 
@@ -37,18 +36,17 @@ object EffectItemsAdderTelekinesis : Effect<NoCompileData>("telekinesis") {
         holder: ProvidedHolder,
         compileData: NoCompileData
     ) {
-        players[dispatcher.uuid].add(identifiers.uuid)
+        players.compute(dispatcher.uuid) { _, active -> active.orEmpty() + identifiers.uuid }
     }
 
     override fun onDisable(dispatcher: Dispatcher<*>, identifiers: Identifiers, holder: ProvidedHolder) {
         players.computeIfPresent(dispatcher.uuid) { _, active ->
-            active.remove(identifiers.uuid)
-            active.takeIf { it.isNotEmpty() }
+            (active - identifiers.uuid).takeIf { it.isNotEmpty() }
         }
     }
 
     override fun postRegister() {
-        TelekinesisUtils.registerTest { players[it.uniqueId].isNotEmpty() }
+        TelekinesisUtils.registerTest { players[it.uniqueId]?.isNotEmpty() == true }
     }
 
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)

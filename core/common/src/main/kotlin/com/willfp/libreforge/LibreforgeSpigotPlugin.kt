@@ -81,7 +81,6 @@ import com.willfp.libreforge.triggers.Triggers
 import com.willfp.libreforge.triggers.impl.TriggerTridentHit
 import com.willfp.libreforge.triggers.placeholders.impl.TriggerPlaceholderHits
 import org.bukkit.Bukkit
-import org.bukkit.entity.LivingEntity
 import org.bukkit.event.Listener
 
 internal lateinit var plugin: LibreforgeSpigotPlugin
@@ -121,6 +120,7 @@ class LibreforgeSpigotPlugin : EcoPlugin() {
     )
 
     private val displayModule = ItemFlagDisplay(this)
+    private var configuredChainIds = emptySet<String>()
 
     init {
         plugin = this
@@ -135,6 +135,7 @@ class LibreforgeSpigotPlugin : EcoPlugin() {
 
     override fun handleEnable() {
         onDisable { clearAttackCooldownSnapshots() }
+        EntityRefreshListener.backfillLoadedEntities()
 
         if (this.configYml.getBool("show-libreforge-info")) {
             this.logger.info("")
@@ -176,7 +177,9 @@ class LibreforgeSpigotPlugin : EcoPlugin() {
         TriggerTridentAttack.clearSnapshots()
         TriggerPlaceholderHits.clearAll()
         EffectDropPickupItem.clearAll()
-        clearAllHolderCaches()
+        ItemRefreshListener.clearPendingPickupRefreshes()
+        EntityRefreshListener.clear()
+        clearAllHolderState()
     }
 
     override fun handleReload() {
@@ -188,15 +191,19 @@ class LibreforgeSpigotPlugin : EcoPlugin() {
             skipAfkPlayers = configYml.getBool("refresh.players.skip-afk-players")
         )
 
-        for (config in chainsYml.getSubsections("chains")) {
-            Effects.register(
-                config.getString("id"),
-                Effects.compileChain(
-                    config.getSubsections("effects"),
-                    ViolationContext(this, "chains.yml")
-                ) ?: continue
-            )
+        val replacementChains = buildMap {
+            for (config in chainsYml.getSubsections("chains")) {
+                put(
+                    config.getString("id"),
+                    Effects.compileChain(
+                        config.getSubsections("effects"),
+                        ViolationContext(this@LibreforgeSpigotPlugin, "chains.yml")
+                    ) ?: continue
+                )
+            }
         }
+        Effects.replaceChains(configuredChainIds, replacementChains)
+        configuredChainIds = replacementChains.keys
 
         for (config in tagsYml.getSubsections("tags")) {
             Items.registerTag(CustomTag(config, this))
@@ -224,7 +231,7 @@ class LibreforgeSpigotPlugin : EcoPlugin() {
 
         displayModule.reload()
 
-        clearAllHolderCaches()
+        invalidateAllHolderCaches()
 
         hasLoaded = true
     }
@@ -238,22 +245,10 @@ class LibreforgeSpigotPlugin : EcoPlugin() {
 
         val settings = refreshSettings
         if (settings.entitiesEnabled) {
-            /*
-            Poll for condition changes in entities.
-            Each world is offset by 3 ticks to prevent lag spikes.
-             */
-            var currentOffset = 30L
-            for (world in Bukkit.getWorlds()) {
-                plugin.scheduler.runTimer(currentOffset, settings.entityInterval) {
-                    for (entity in world.entities) {
-                        if (entity is LivingEntity) {
-                            SchedulerHelper.runTask(this@LibreforgeSpigotPlugin, entity) {
-                                entity.toDispatcher().pollEffects()
-                            }
-                        }
-                    }
-                }
-                currentOffset += 3
+            // The global task only walks weak references. Every live entity API access
+            // happens after ownership has transferred to that entity's scheduler.
+            plugin.scheduler.runTimer(30, settings.entityInterval) {
+                EntityRefreshListener.pollTrackedEntities()
             }
         }
 

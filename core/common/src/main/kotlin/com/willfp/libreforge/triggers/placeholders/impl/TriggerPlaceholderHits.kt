@@ -43,15 +43,16 @@ object TriggerPlaceholderHits : TriggerPlaceholder("hits") {
         val player = event.trigger.data.player ?: return
         val entity = event.trigger.data.victim ?: return
 
-        val map = hitsByEntity.computeIfAbsent(entity.uniqueId) { ConcurrentHashMap() }
-        val hits = entity.getHits(player)
-        if (entity.health >= entity.getAttribute(Attribute.MAX_HEALTH)!!.value) {
-            map.clear()
-            map[player.uniqueId] = 1
-        } else {
-            map[player.uniqueId] = hits + 1
+        hitsByEntity.compute(entity.uniqueId) { _, existing ->
+            val hits = existing ?: ConcurrentHashMap()
+            if (entity.health >= entity.getAttribute(Attribute.MAX_HEALTH)!!.value) {
+                hits.clear()
+                hits[player.uniqueId] = 1
+            } else {
+                hits.compute(player.uniqueId) { _, count -> (count ?: 0) + 1 }
+            }
+            hits
         }
-
     }
 
     private fun LivingEntity.getHits(player: Player): Int {
@@ -60,6 +61,14 @@ object TriggerPlaceholderHits : TriggerPlaceholder("hits") {
 
     internal fun clearEntity(uuid: UUID) {
         hitsByEntity.remove(uuid)
+        // The outer map is keyed by victim, so attacker cleanup is O(active victims).
+        // Keep this simple unless profiling proves a reverse index is worthwhile.
+        for (victimId in hitsByEntity.keys) {
+            hitsByEntity.computeIfPresent(victimId) { _, hits ->
+                hits.remove(uuid)
+                hits.takeIf { it.isNotEmpty() }
+            }
+        }
     }
 
     internal fun clearAll() {

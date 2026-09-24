@@ -7,7 +7,7 @@ import com.willfp.libreforge.HolderProvider
 import com.willfp.libreforge.TypedHolderProvider
 import com.willfp.libreforge.TypedProvidedHolder
 import com.willfp.libreforge.get
-import com.willfp.libreforge.registerRefreshFunction
+import com.willfp.libreforge.registerRefreshFunctionOwnedBy
 import com.willfp.libreforge.slot.impl.NumericSlotType
 import org.bukkit.entity.LivingEntity
 import org.bukkit.entity.Player
@@ -76,9 +76,9 @@ abstract class ItemHolderFinder<T : Holder> {
             .createWithExpected<UUID, ItemHolderCacheEntry<T>>(ITEM_HOLDER_CACHE_CAPACITY)
 
         init {
-            registerRefreshFunction {
+            registerRefreshFunctionOwnedBy({
                 cache.remove(it.uuid)
-            }
+            }, this@ItemHolderFinder.javaClass.classLoader)
         }
 
         override fun provide(dispatcher: Dispatcher<*>): Collection<TypedProvidedHolder<T>> {

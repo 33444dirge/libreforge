@@ -2,6 +2,8 @@ package com.willfp.libreforge
 
 import org.bukkit.Bukkit
 import org.bukkit.Location
+import org.bukkit.command.BlockCommandSender
+import org.bukkit.command.CommandSender
 import org.bukkit.entity.Entity
 import org.bukkit.plugin.Plugin
 import org.bukkit.scheduler.BukkitTask
@@ -100,6 +102,14 @@ object SchedulerHelper {
             entity.scheduler.runDelayed(plugin, { task.run() }, null, delay)
         } else {
             Bukkit.getScheduler().runTaskLater(plugin, task, delay)
+        }
+    }
+
+    fun runTaskLater(plugin: Plugin, sender: CommandSender, task: Runnable, delay: Long): Any? {
+        return when (sender) {
+            is Entity -> runTaskLater(plugin, sender, task, delay)
+            is BlockCommandSender -> runTaskLater(plugin, sender.block.location, task, delay)
+            else -> runTaskLater(plugin, task, delay)
         }
     }
 

@@ -43,8 +43,7 @@ object EffectTelekinesis : Effect<NoCompileData>("telekinesis") {
         )
     }
 
-    private val players = ConcurrentHashMap<UUID, MutableList<UUID>>()
-    private var allowTamedMobKills: Boolean = false
+    private val players = ConcurrentHashMap<UUID, Map<UUID, Boolean>>()
 
     override fun onEnable(
         dispatcher: Dispatcher<*>,
@@ -53,14 +52,15 @@ object EffectTelekinesis : Effect<NoCompileData>("telekinesis") {
         holder: ProvidedHolder,
         compileData: NoCompileData
     ) {
-        players.computeIfAbsent(dispatcher.uuid) { mutableListOf() }.add(identifiers.uuid)
-        allowTamedMobKills = config.getBoolOrNull("on_tamed_mob_kills") ?: false
+        val allowTamedMobKills = config.getBoolOrNull("on_tamed_mob_kills") ?: false
+        players.compute(dispatcher.uuid) { _, active ->
+            active.orEmpty() + (identifiers.uuid to allowTamedMobKills)
+        }
     }
 
     override fun onDisable(dispatcher: Dispatcher<*>, identifiers: Identifiers, holder: ProvidedHolder) {
         players.computeIfPresent(dispatcher.uuid) { _, active ->
-            active.remove(identifiers.uuid)
-            active.takeIf { it.isNotEmpty() }
+            (active - identifiers.uuid).takeIf { it.isNotEmpty() }
         }
     }
 
@@ -143,8 +143,10 @@ object EffectTelekinesis : Effect<NoCompileData>("telekinesis") {
             is Player -> killer
             is Projectile -> killer.shooter as? Player
             is Tameable -> {
-                if (!killer.isTamed || !allowTamedMobKills) return
-                killer.owner as? Player
+                if (!killer.isTamed) return
+                val owner = killer.owner as? Player ?: return
+                if (players[owner.uniqueId]?.values?.any { it } != true) return
+                owner
             }
             else -> null
         } ?: return

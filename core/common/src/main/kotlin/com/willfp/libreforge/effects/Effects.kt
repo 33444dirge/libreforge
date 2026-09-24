@@ -235,23 +235,29 @@ import com.willfp.libreforge.separatorAmbivalent
 import com.willfp.libreforge.toWeightedList
 import com.willfp.libreforge.triggers.Triggers
 import java.util.UUID
-import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicReference
 
 object Effects : Registry<Effect<*>>() {
-    private val identifiedChains = ConcurrentHashMap<String, Chain>()
+    private val identifiedChains = AtomicReference<Map<String, Chain>>(emptyMap())
 
     /**
      * Get a chain by [id].
      */
     fun getChainByID(id: String): Chain? {
-        return identifiedChains[id]
+        return identifiedChains.get()[id]
     }
 
     /**
      * Register a new [chain] with a certain [id].
      */
     fun register(id: String, chain: Chain) {
-        identifiedChains[id] = chain
+        identifiedChains.updateAndGet { it + (id to chain) }
+    }
+
+    internal fun replaceChains(previousIds: Set<String>, replacement: Map<String, Chain>) {
+        identifiedChains.updateAndGet { current ->
+            current.filterKeys { it !in previousIds } + replacement
+        }
     }
 
     /**

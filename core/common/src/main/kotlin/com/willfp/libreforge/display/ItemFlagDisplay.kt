@@ -11,9 +11,13 @@ import org.bukkit.persistence.PersistentDataType
 class ItemFlagDisplay(
     private val plugin: LibreforgeSpigotPlugin
 ) : DisplayModule(plugin, DisplayPriority.HIGHEST) {
-    private val flags = mutableSetOf<ItemFlag>()
+    private data class DisplayState(
+        val enabled: Boolean,
+        val flags: Set<ItemFlag>
+    )
 
-    private var enabled = false
+    @Volatile
+    private var state = DisplayState(false, emptySet())
 
     private val pdcKey = plugin.createNamespacedKey("display_flags")
 
@@ -22,9 +26,7 @@ class ItemFlagDisplay(
     }
 
     internal fun reload() {
-        enabled = plugin.configYml.getBool("display.enabled")
-
-        flags.clear()
+        val flags = mutableSetOf<ItemFlag>()
 
         for (flagName in plugin.configYml.getStrings("display.item-flags")) {
             try {
@@ -34,42 +36,56 @@ class ItemFlagDisplay(
                 plugin.logger.warning("Valid options are: ${ItemFlag.entries.joinToString(", ") { it.name.lowercase() }}")
             }
         }
+
+        state = DisplayState(plugin.configYml.getBool("display.enabled"), flags.toSet())
     }
 
     override fun display(itemStack: ItemStack, vararg args: Any) {
-        if (!enabled) {
+        val current = state
+        if (!current.enabled) {
             return
         }
 
         val fis = itemStack.fast()
 
-        var existingFlags = ""
+        val existingFlags = current.flags.filter { fis.hasItemFlag(it) }
 
-        for (flag in flags) {
-            if (fis.hasItemFlag(flag)) {
-                existingFlags += flag.toString()
-            }
-        }
+        fis.persistentDataContainer.set(
+            pdcKey,
+            PersistentDataType.STRING,
+            current.flags.joinToString(",") { it.name } + "|" +
+                    existingFlags.joinToString(",") { it.name }
+        )
 
-        fis.persistentDataContainer.set(pdcKey, PersistentDataType.STRING, flags.joinToString(","))
-
-        fis.addItemFlags(*flags.toTypedArray())
+        fis.addItemFlags(*current.flags.toTypedArray())
     }
 
     override fun revert(itemStack: ItemStack) {
-        if (!enabled) {
+        val current = state
+        if (!current.enabled) {
             return
         }
 
         val fis = itemStack.fast()
 
-        fis.removeItemFlags(*flags.toTypedArray())
-
-        val existingFlags = fis.persistentDataContainer.get(pdcKey, PersistentDataType.STRING) ?: return
+        val stored = fis.persistentDataContainer.get(pdcKey, PersistentDataType.STRING) ?: return
 
         fis.persistentDataContainer.remove(pdcKey)
 
-        val serverFlags = existingFlags.split(",").map { ItemFlag.valueOf(it) }
+        val (appliedNames, existingNames) = if ('|' in stored) {
+            stored.substringBefore('|') to stored.substringAfter('|')
+        } else {
+            // Legacy entries stored only one list and restored that same list.
+            stored to stored
+        }
+        val appliedFlags = appliedNames.split(",")
+            .filter { it.isNotEmpty() }
+            .mapNotNull { runCatching { ItemFlag.valueOf(it) }.getOrNull() }
+        val serverFlags = existingNames.split(",")
+            .filter { it.isNotEmpty() }
+            .mapNotNull { runCatching { ItemFlag.valueOf(it) }.getOrNull() }
+
+        fis.removeItemFlags(*appliedFlags.toTypedArray())
         fis.addItemFlags(*serverFlags.toTypedArray())
     }
 }

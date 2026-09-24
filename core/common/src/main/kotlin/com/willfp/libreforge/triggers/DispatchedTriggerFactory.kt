@@ -15,7 +15,7 @@ Prevents multiple identical triggers from being triggered in the same tick.
 class DispatchedTriggerFactory(
     private val plugin: EcoPlugin
 ) {
-    private val dispatcherTriggers = ConcurrentHashMap<UUID, MutableList<Int>>()
+    private val dispatcherTriggers = ConcurrentHashMap<UUID, Set<Int>>()
 
 
     fun create(dispatcher: Dispatcher<*>, trigger: Trigger, data: TriggerData): DispatchedTrigger? {
@@ -26,11 +26,18 @@ class DispatchedTriggerFactory(
         val hash = (trigger.hashCode() shl 5) xor data.hashCode()
         val uuid = dispatcher.uuid
 
-        val list = dispatcherTriggers.computeIfAbsent(uuid) { mutableListOf() }
-        if (hash in list) {
+        var added = false
+        dispatcherTriggers.compute(uuid) { _, dispatched ->
+            if (hash in dispatched.orEmpty()) {
+                dispatched
+            } else {
+                added = true
+                dispatched.orEmpty() + hash
+            }
+        }
+        if (!added) {
             return null
         }
-        list.add(hash)
         val dispatchData = if (data.dispatcher == dispatcher) data else data.copy(dispatcher = dispatcher)
         return DispatchedTrigger(dispatcher, trigger, dispatchData)
     }

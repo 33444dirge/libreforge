@@ -18,12 +18,13 @@ object EffectShuffleHotbar : Effect<NoCompileData>("shuffle_hotbar") {
     override fun onTrigger(config: Config, data: TriggerData, compileData: NoCompileData): Boolean {
         val victim = data.victim as? Player ?: return false
 
-        val hotbar = (0..8)
-            .map { victim.inventory.getItem(it) }
-            .shuffled()
+        val original = (0..8).map { victim.inventory.getItem(it) }
+        val hotbar = original.shuffled()
 
         for ((index, item) in hotbar.withIndex()) {
-            victim.inventory.setItem(index, item)
+            if (original[index] != item) {
+                victim.inventory.setItem(index, item)
+            }
         }
 
         return true

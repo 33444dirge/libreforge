@@ -38,9 +38,10 @@ object TriggerGroupStatic : TriggerGroup("static") {
     override fun postRegister() {
         val task = FoliaRunnableTask(plugin) {
             tick++
+            val currentTick = tick
 
             for ((interval, trigger) in registry) {
-                if (tick % interval == 0) {
+                if (currentTick % interval == 0) {
                     for (player in Bukkit.getOnlinePlayers()) {
                         SchedulerHelper.runTask(plugin, player) {
                             trigger.dispatchFor(player)
@@ -52,7 +53,7 @@ object TriggerGroupStatic : TriggerGroup("static") {
             for ((_, trigger) in dynamicRegistry) {
                 for (player in Bukkit.getOnlinePlayers()) {
                     SchedulerHelper.runTask(plugin, player) {
-                        trigger.dispatchIfMet(player, tick)
+                        trigger.dispatchIfMet(player, currentTick)
                     }
                 }
             }

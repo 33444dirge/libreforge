@@ -4,6 +4,7 @@ import com.willfp.eco.core.config.interfaces.Config
 import com.willfp.eco.core.particle.Particles
 import com.willfp.libreforge.ArgType
 import com.willfp.libreforge.NoCompileData
+import com.willfp.libreforge.SchedulerHelper
 import com.willfp.libreforge.arguments
 import com.willfp.libreforge.effects.Effect
 import com.willfp.libreforge.getIntFromExpression
@@ -42,7 +43,7 @@ object EffectSpawnParticle : Effect<NoCompileData>(
         val particle = Particles.lookup(config.getString("particle"))
         val amount = config.getOrElse("amount", 1) { getIntFromExpression(it, data) }
 
-        plugin.scheduler.runAsync {
+        SchedulerHelper.runTask(plugin, location) {
             particle.spawn(location, amount)
         }
 

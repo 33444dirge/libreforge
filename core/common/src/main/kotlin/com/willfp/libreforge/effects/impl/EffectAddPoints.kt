@@ -53,7 +53,7 @@ object EffectAddPoints : Effect<NoCompileData>("add_points") {
             amount
         )
 
-        player.points[point] += amount
+        player.points.add(point, amount)
     }
 
     override fun onDisable(dispatcher: Dispatcher<*>, identifiers: Identifiers, holder: ProvidedHolder) {
@@ -66,7 +66,7 @@ object EffectAddPoints : Effect<NoCompileData>("add_points") {
         }
         val removedPoint = addedPoint ?: return
 
-        player.points[removedPoint.point] -= removedPoint.amount
+        player.points.add(removedPoint.point, -removedPoint.amount)
     }
 
     private data class AddedPoint(

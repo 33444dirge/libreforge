@@ -53,7 +53,7 @@ object EffectAddHolderToVictim : Effect<HolderTemplate>("add_holder_to_victim") 
         )
     }
 
-    private val holders = ConcurrentHashMap<UUID, MutableList<Holder>>()
+    private val holders = ConcurrentHashMap<UUID, List<Holder>>()
 
     init {
         registerGenericHolderProvider { holders[it.uuid]?.map { h -> SimpleProvidedHolder(h) } ?: emptyList() }
@@ -65,12 +65,11 @@ object EffectAddHolderToVictim : Effect<HolderTemplate>("add_holder_to_victim") 
         val duration = config.getIntFromExpression("duration", data).coerceAtLeast(1)
         val holder = compileData.toHolder().nest(data.holder)
 
-        holders.getOrPut(player.uniqueId) { mutableListOf() }.add(holder)
+        holders.compute(player.uniqueId) { _, active -> active.orEmpty() + holder }
 
         SchedulerHelper.runTaskLater(plugin, player, {
-            holders[player.uniqueId]?.remove(holder)
-            if (holders[player.uniqueId].isNullOrEmpty()) {
-                holders.remove(player.uniqueId)
+            holders.computeIfPresent(player.uniqueId) { _, active ->
+                (active - holder).takeIf { it.isNotEmpty() }
             }
         }, duration.toLong())
 

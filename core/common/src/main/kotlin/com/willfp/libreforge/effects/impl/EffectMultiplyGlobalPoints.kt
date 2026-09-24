@@ -33,7 +33,7 @@ object EffectMultiplyGlobalPoints : Effect<NoCompileData>("multiply_global_point
     override fun onTrigger(config: Config, data: TriggerData, compileData: NoCompileData): Boolean {
         val type = config.getString("type")
 
-        globalPoints[type] *= config.getDoubleFromExpression("multiplier", data)
+        globalPoints.multiply(type, config.getDoubleFromExpression("multiplier", data))
 
         return true
     }

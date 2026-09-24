@@ -25,18 +25,25 @@ internal object CommandLrcdbExport : Subcommand(
 
         val configName = args.getOrNull(2).notifyNull("must-specify-config-name") ?: return
         val config = category[configName].notifyNull("invalid-config-name") ?: return
+        val prepared = config.prepareShare(false)
 
-        onLrcdbThread {
-            val response = config.share(false)
+        onLrcdbThread(sender, { config.executeShare(prepared) }) { replyTo, result ->
+            val response = result.getOrElse { throwable ->
+                replyTo.sendMessage(
+                    plugin.langYml.getMessage("lrcdb-export-error")
+                        .replace("%message%", throwable.message ?: throwable.javaClass.simpleName)
+                )
+                return@onLrcdbThread
+            }
 
             if (response.success) {
-                sender.sendMessage(
+                replyTo.sendMessage(
                     plugin.langYml.getMessage("lrcdb-export-success")
                         .replace("%name%", configName)
                         .replace("%id%", response.body.getString("id"))
                 )
             } else {
-                sender.sendMessage(
+                replyTo.sendMessage(
                     plugin.langYml.getMessage("lrcdb-export-error")
                         .replace(
                             "%message%",
