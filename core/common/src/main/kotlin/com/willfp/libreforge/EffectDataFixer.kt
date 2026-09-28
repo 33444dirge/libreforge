@@ -127,7 +127,7 @@ object PaperEffectDataFixer : Listener {
         transientMetadataKeys.forEach { entity.removeMetadata(it, plugin) }
         TriggerTridentHit.clearSnapshot(entity.uniqueId)
         TriggerTridentAttack.clearSnapshot(entity.uniqueId)
-        TriggerPlaceholderHits.clearEntity(entity.uniqueId)
+        TriggerPlaceholderHits.clearVictim(entity.uniqueId)
         dispatcher.purgePreviousHolders()
     }
 }

@@ -1,0 +1,6 @@
+name: HitsCleanupProbe
+version: 1.0.0
+main: audit.libreforge.HitsCleanupProbe
+api-version: '1.21'
+folia-supported: true
+depend: [libreforge, eco]
