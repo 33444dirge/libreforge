@@ -59,6 +59,12 @@ object TriggerPlaceholderHits : TriggerPlaceholder("hits") {
         return hitsByEntity[this.uniqueId]?.get(player.uniqueId) ?: 0
     }
 
+    // Non-player entities can only be victims: trackHits always uses a Player as attacker.
+    // Do not scan other victims when such an entity is removed.
+    internal fun clearVictim(uuid: UUID) {
+        hitsByEntity.remove(uuid)
+    }
+
     internal fun clearEntity(uuid: UUID) {
         hitsByEntity.remove(uuid)
         // The outer map is keyed by victim, so attacker cleanup is O(active victims).
