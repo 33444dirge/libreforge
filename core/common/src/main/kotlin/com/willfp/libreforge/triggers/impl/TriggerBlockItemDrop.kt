@@ -2,8 +2,11 @@ package com.willfp.libreforge.triggers.impl
 
 import com.willfp.eco.core.drops.DropQueue
 import com.willfp.eco.core.integrations.antigrief.AntigriefManager
+import com.willfp.eco.util.isPlayerPlaced
 import com.willfp.libreforge.filterNotEmpty
 import com.willfp.libreforge.toDispatcher
+import com.willfp.libreforge.plugin
+import com.willfp.libreforge.triggers.PlayerPlacedSnapshot
 import com.willfp.libreforge.triggers.Trigger
 import com.willfp.libreforge.triggers.TriggerData
 import com.willfp.libreforge.triggers.TriggerParameter
@@ -18,8 +21,31 @@ import org.bukkit.block.data.BlockData
 import org.bukkit.event.EventHandler
 import org.bukkit.event.EventPriority
 import org.bukkit.event.block.BlockDropItemEvent
+import org.bukkit.event.block.BlockBreakEvent
+import java.util.UUID
+import java.util.concurrent.ConcurrentHashMap
 
 object TriggerBlockItemDrop : Trigger("block_item_drop") {
+    private data class BreakKey(val world: UUID, val x: Int, val y: Int, val z: Int, val player: UUID)
+    private class SourceSnapshot(val placed: Boolean, val material: Material)
+    private val pendingSources = ConcurrentHashMap<BreakKey, SourceSnapshot>()
+
+    private fun key(block: Block, player: UUID) = BreakKey(
+        block.world.uid, block.x, block.y, block.z, player
+    )
+
+    @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
+    fun captureSource(event: BlockBreakEvent) {
+        val block = event.block
+        val key = key(block, event.player.uniqueId)
+        val snapshot = SourceSnapshot(block.isPlayerPlaced, block.type)
+        pendingSources[key] = snapshot
+        // Breaks without drops and cancelled breaks must not leave a snapshot for a later break.
+        plugin.scheduler.runLater({
+            pendingSources.remove(key, snapshot)
+        }, 1)
+    }
+
     override val description = "Fires when a block broken by the player drops its items."
 
     override val categories = setOf("world")
@@ -47,6 +73,7 @@ object TriggerBlockItemDrop : Trigger("block_item_drop") {
     fun handle(event: BlockDropItemEvent) {
         val player = event.player
         val block = event.block
+        val source = pendingSources.remove(key(block, player.uniqueId))
 
         if (player.gameMode == GameMode.CREATIVE || player.gameMode == GameMode.SPECTATOR) {
             return
@@ -60,7 +87,10 @@ object TriggerBlockItemDrop : Trigger("block_item_drop") {
             return
         }
 
-        val brokenBlock = BrokenBlock(block, event.blockState.type, event.blockState.blockData)
+        // Missing snapshots are treated as ineligible, rather than rewarding a potentially
+        // player-placed block based on an entry mcMMO has already deleted.
+        val wasPlayerPlaced = source?.takeIf { it.material == event.blockState.type }?.placed ?: true
+        val brokenBlock = BrokenBlock(block, event.blockState.type, event.blockState.blockData, wasPlayerPlaced)
 
         val itemEntityToStack = event.items.associateWith { it.itemStack }
         val originalDrops = itemEntityToStack.values.toList().filterNotEmpty()
@@ -130,8 +160,9 @@ object TriggerBlockItemDrop : Trigger("block_item_drop") {
     private class BrokenBlock(
         private val block: Block,
         private val type: Material,
-        private val data: BlockData
-    ): Block by block {
+        private val data: BlockData,
+        override val wasPlayerPlaced: Boolean
+    ): Block by block, PlayerPlacedSnapshot {
         override fun getType() = type
         override fun getBlockData(): BlockData = data
     }

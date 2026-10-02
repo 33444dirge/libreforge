@@ -6,6 +6,7 @@ import com.willfp.libreforge.ArgType
 import com.willfp.libreforge.NoCompileData
 import com.willfp.libreforge.filters.Filter
 import com.willfp.libreforge.triggers.TriggerData
+import com.willfp.libreforge.triggers.PlayerPlacedSnapshot
 
 object FilterPlayerPlaced : Filter<NoCompileData, Boolean>("player_placed") {
     override val description = "Matches when the block was (or was not) placed by a player."
@@ -20,6 +21,7 @@ object FilterPlayerPlaced : Filter<NoCompileData, Boolean>("player_placed") {
     override fun isMet(data: TriggerData, value: Boolean, compileData: NoCompileData): Boolean {
         val block = data.block ?: return true
 
-        return block.isPlayerPlaced == value
+        val playerPlaced = (block as? PlayerPlacedSnapshot)?.wasPlayerPlaced ?: block.isPlayerPlaced
+        return playerPlaced == value
     }
 }
