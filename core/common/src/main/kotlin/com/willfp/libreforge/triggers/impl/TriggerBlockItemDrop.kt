@@ -4,6 +4,7 @@ import com.willfp.eco.core.drops.DropQueue
 import com.willfp.eco.core.integrations.antigrief.AntigriefManager
 import com.willfp.eco.util.isPlayerPlaced
 import com.willfp.libreforge.filterNotEmpty
+import com.willfp.libreforge.SchedulerHelper
 import com.willfp.libreforge.toDispatcher
 import com.willfp.libreforge.plugin
 import com.willfp.libreforge.triggers.PlayerPlacedSnapshot
@@ -40,8 +41,9 @@ object TriggerBlockItemDrop : Trigger("block_item_drop") {
         val key = key(block, event.player.uniqueId)
         val snapshot = SourceSnapshot(block.isPlayerPlaced, block.type)
         pendingSources[key] = snapshot
+        // Expire on this block's region: a global tick can run before its drop event finishes.
         // Breaks without drops and cancelled breaks must not leave a snapshot for a later break.
-        plugin.scheduler.runLater({
+        SchedulerHelper.runTaskLater(plugin, block.location, {
             pendingSources.remove(key, snapshot)
         }, 1)
     }
