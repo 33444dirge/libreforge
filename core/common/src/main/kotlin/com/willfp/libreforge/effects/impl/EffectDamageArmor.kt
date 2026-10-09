@@ -7,6 +7,7 @@ import com.willfp.libreforge.arguments
 import com.willfp.libreforge.effects.Effect
 import com.willfp.libreforge.enumValueOfOrNull
 import com.willfp.libreforge.getIntFromExpression
+import com.willfp.libreforge.getMaxDurability
 import com.willfp.libreforge.triggers.TriggerData
 import com.willfp.libreforge.triggers.TriggerParameter
 import org.bukkit.Bukkit
@@ -112,11 +113,12 @@ object EffectDamageArmor : Effect<NoCompileData>("damage_armor") {
 
     private fun applyDamage(itemStack: ItemStack, amount: Int, player: Player?) {
         val meta = itemStack.itemMeta as? Damageable ?: return
+        val maxDamage = itemStack.getMaxDurability(meta)
 
         meta.damage += amount
 
-        if (meta.damage >= itemStack.type.maxDurability) {
-            meta.damage = itemStack.type.maxDurability.toInt()
+        if (meta.damage >= maxDamage) {
+            meta.damage = maxDamage
 
             itemStack.itemMeta = meta
 
