@@ -1,4 +1,7 @@
 dependencies {
+    testImplementation("org.junit.jupiter:junit-jupiter:6.0.3")
+    testRuntimeOnly("org.junit.platform:junit-platform-launcher:6.0.3")
+    testImplementation("io.mockk:mockk-jvm:1.13.17")
     implementation("dev.romainguy:kotlin-math:1.6.0") {
         isTransitive = false
     }
@@ -61,4 +64,13 @@ repositories {
 
 configurations.all {
     exclude(group = "com.sk89q.worldedit", module = "worldedit-core")
+}
+
+dependencies {
+    // Optional server/plugin APIs are test fixtures, not standalone runtime distributions.
+    testImplementation(files(configurations.compileClasspath))
+}
+
+tasks.test {
+    useJUnitPlatform()
 }

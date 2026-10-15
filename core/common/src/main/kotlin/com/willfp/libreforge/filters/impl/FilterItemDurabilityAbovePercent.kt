@@ -5,6 +5,7 @@ import com.willfp.libreforge.ArgType
 import com.willfp.libreforge.NoCompileData
 import com.willfp.libreforge.filters.Filter
 import com.willfp.libreforge.getDoubleFromExpression
+import com.willfp.libreforge.getMaxDurability
 import com.willfp.libreforge.triggers.TriggerData
 import org.bukkit.inventory.meta.Damageable
 
@@ -22,6 +23,8 @@ object FilterItemDurabilityAbovePercent : Filter<NoCompileData, Double>("item_du
         val item = data.foundItem ?: return true
         val meta = item.itemMeta as? Damageable ?: return true
 
-        return (item.type.maxDurability - meta.damage) / item.type.maxDurability >= (value / 100.0)
+        val maxDamage = item.getMaxDurability(meta)
+        if (maxDamage <= 0) return true
+        return (maxDamage - meta.damage).toDouble() / maxDamage >= (value / 100.0)
     }
 }
