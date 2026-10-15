@@ -16,6 +16,7 @@ import com.willfp.libreforge.triggers.Triggers
 import org.bukkit.event.Listener
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicReferenceArray
 
 abstract class Effect<T>(
     final override val id: String
@@ -25,6 +26,20 @@ abstract class Effect<T>(
 
     // The identifier factory.
     private val identifierFactory = IdentifierFactory(UUID.nameUUIDFromBytes(id.toByteArray()))
+
+    // Reuse deterministic IDs only on these long-lived effect objects, not on
+    // public / temporary IdentifierFactory instances. No entity or item is retained.
+    private val identifiers = AtomicReferenceArray<Identifiers>(64)
+
+    private fun identifiersFor(count: Int): Identifiers {
+        if (count < 1 || count > identifiers.length()) {
+            return identifierFactory.makeIdentifiers(count)
+        }
+        val index = count - 1
+        identifiers.get(index)?.let { return it }
+        val created = identifierFactory.makeIdentifiers(count)
+        return if (identifiers.compareAndSet(index, null, created)) created else identifiers.get(index)
+    }
 
     /**
      * If the effect should be reloaded.
@@ -84,7 +99,7 @@ abstract class Effect<T>(
 
         val withHolder = config.config.applyHolder(holder, dispatcher)
 
-        onEnable(dispatcher, withHolder, identifierFactory.makeIdentifiers(count), holder, config.compileData)
+        onEnable(dispatcher, withHolder, identifiersFor(count), holder, config.compileData)
     }
 
     /**
@@ -122,7 +137,7 @@ abstract class Effect<T>(
             return
         }
 
-        onDisable(dispatcher, identifierFactory.makeIdentifiers(count), holder)
+        onDisable(dispatcher, identifiersFor(count), holder)
     }
 
     /**

@@ -321,27 +321,38 @@ private fun Dispatcher<*>.computeHolders(): Collection<ProvidedHolder> {
 
     val old = previousHolders.getIfPresent(this.uuid) ?: emptyList()
 
+    if (holders.isEmpty() && old.isEmpty()) {
+        previousHolders.put(this.uuid, holders)
+        return holders
+    }
+
     val newByID = holders.associateBy { it.holder.id }
     val oldByID = old.associateBy { it.holder.id }
 
-    val added = newByID.keys - oldByID.keys
-    val removed = oldByID.keys - newByID.keys
-
-    for (id in added) {
-        Bukkit.getPluginManager().callEvent(
-            HolderEnableEvent(this, newByID[id]!!, holders)
-        )
+    // The maps already contain the membership and preserve first-key order /
+    // last-holder selection. Do not allocate separate difference sets per scan.
+    var changed = false
+    for ((id, holder) in newByID) {
+        if (!oldByID.containsKey(id)) {
+            changed = true
+            Bukkit.getPluginManager().callEvent(
+                HolderEnableEvent(this, holder, holders)
+            )
+        }
     }
 
-    for (id in removed) {
-        Bukkit.getPluginManager().callEvent(
-            HolderDisableEvent(this, oldByID[id]!!, old)
-        )
+    for ((id, holder) in oldByID) {
+        if (!newByID.containsKey(id)) {
+            changed = true
+            Bukkit.getPluginManager().callEvent(
+                HolderDisableEvent(this, holder, old)
+            )
+        }
     }
 
     previousHolders.put(this.uuid, holders)
 
-    if (added.isNotEmpty() || removed.isNotEmpty()) {
+    if (changed) {
         @Suppress("DEPRECATION")
         Bukkit.getPluginManager().callEvent(
             HolderProvideEvent(this, holders)
@@ -411,8 +422,24 @@ fun Collection<ProvidedHolder>.getProvidedActiveEffects(dispatcher: Dispatcher<*
 /**
  * Get active effects for a [dispatcher].
  */
-fun ProvidedHolder.getActiveEffects(dispatcher: Dispatcher<*>) =
-    this.holder.effects.filter { it.conditions.areMet(dispatcher, this) }.toSet()
+fun ProvidedHolder.getActiveEffects(dispatcher: Dispatcher<*>): Set<EffectBlock> {
+    var first: EffectBlock? = null
+    var multiple: LinkedHashSet<EffectBlock>? = null
+    for (effect in holder.effects) {
+        // Evaluate every occurrence, including duplicates, in the original order.
+        if (!effect.conditions.areMet(dispatcher, this)) continue
+        if (first == null) {
+            first = effect
+        } else if (multiple != null) {
+            multiple.add(effect)
+        } else if (effect != first) {
+            multiple = LinkedHashSet<EffectBlock>(4)
+            multiple.add(first)
+            multiple.add(effect)
+        }
+    }
+    return multiple ?: if (first == null) emptySet() else setOf(first)
+}
 
 /**
  * Recalculate active effects.

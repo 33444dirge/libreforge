@@ -9,6 +9,7 @@ import com.willfp.libreforge.TypedProvidedHolder
 import com.willfp.libreforge.get
 import com.willfp.libreforge.registerRefreshFunctionOwnedBy
 import com.willfp.libreforge.slot.impl.NumericSlotType
+import org.bukkit.Material
 import org.bukkit.entity.LivingEntity
 import org.bukkit.entity.Player
 import org.bukkit.inventory.ItemStack
@@ -56,6 +57,15 @@ abstract class ItemHolderFinder<T : Holder> {
         destination: MutableCollection<TypedProvidedHolder<T>>
     ) {
         for (item in slot.getItems(entity)) {
+            // Empty equipment slots cannot provide item effects. Reject them before
+            // each finder creates FastItemStack / NBT / PDC wrappers. Do not reject
+            // ordinary, unenchanted items: custom items and reforges may use them.
+            // Compare the three air materials directly: Material.isAir() resolves
+            // a BlockType, which is unnecessary on this hot item-only path.
+            val type = item.type
+            if (type == Material.AIR || type == Material.CAVE_AIR || type == Material.VOID_AIR) {
+                continue
+            }
             for (holder in find(item)) {
                 if (isValidInSlot(holder, slot)) {
                     destination.add(SlotItemProvidedHolder(holder, item, slot))
