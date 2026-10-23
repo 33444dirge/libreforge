@@ -176,15 +176,19 @@ open class SimpleProvidedHolder(
 /**
  * A provided holder for an ItemStack.
  */
-open class ItemProvidedHolder(
-    override val holder: Holder,
-    override val provider: ItemStack
+open class ItemProvidedHolder internal constructor(
+    holder: Holder,
+    provider: ItemStack,
+    providerHash: Int
 ) : ProvidedHolder {
-    private val cachedHashCode = calculateHashCode()
+    override val holder: Holder = holder
+    override val provider: ItemStack = provider
 
-    private fun calculateHashCode(): Int {
-        return Objects.hash(holder, provider)
-    }
+    // Use constructor arguments, not open getters: a subclass is not initialized yet.
+    // Same formula as Objects.hash(holder, provider), without its varargs array.
+    private val cachedHashCode = 31 * (31 + holder.hashCode()) + providerHash
+
+    constructor(holder: Holder, provider: ItemStack) : this(holder, provider, provider.hashCode())
 
     override fun hashCode(): Int {
         return cachedHashCode

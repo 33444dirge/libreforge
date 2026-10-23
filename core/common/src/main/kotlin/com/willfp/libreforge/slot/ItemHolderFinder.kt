@@ -66,9 +66,29 @@ abstract class ItemHolderFinder<T : Holder> {
             if (type == Material.AIR || type == Material.CAVE_AIR || type == Material.VOID_AIR) {
                 continue
             }
-            for (holder in find(item)) {
+            val found = find(item)
+            // A single holder has nothing to share; keep that common path allocation-free.
+            if (found.size == 1) {
+                val holder = found[0]
                 if (isValidInSlot(holder, slot)) {
                     destination.add(SlotItemProvidedHolder(holder, item, slot))
+                }
+                continue
+            }
+            var accepted: ArrayList<T>? = null
+            for (holder in found) {
+                if (isValidInSlot(holder, slot)) {
+                    if (accepted == null) accepted = ArrayList(found.size)
+                    accepted.add(holder)
+                }
+            }
+            // Finish extension callbacks before hashing: if a finder updates the item,
+            // all wrappers must describe the final item returned by this scan.
+            // This value is local to one item occurrence, never cached across refreshes.
+            if (accepted != null) {
+                val itemHash = item.hashCode()
+                for (holder in accepted) {
+                    destination.add(SlotItemProvidedHolder(holder, item, slot, itemHash))
                 }
             }
         }

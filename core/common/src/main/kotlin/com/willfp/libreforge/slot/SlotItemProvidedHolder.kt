@@ -5,11 +5,16 @@ import com.willfp.libreforge.ItemProvidedHolder
 import com.willfp.libreforge.TypedProvidedHolder
 import org.bukkit.inventory.ItemStack
 
-class SlotItemProvidedHolder<T: Holder>(
+class SlotItemProvidedHolder<T: Holder> internal constructor(
     override val holder: T,
     provider: ItemStack,
-    val slotType: SlotType
+    val slotType: SlotType,
+    providerHash: Int
 ): ItemProvidedHolder(
     holder,
-    provider
-), TypedProvidedHolder<T>
+    provider,
+    providerHash
+), TypedProvidedHolder<T> {
+    constructor(holder: T, provider: ItemStack, slotType: SlotType) :
+            this(holder, provider, slotType, provider.hashCode())
+}
